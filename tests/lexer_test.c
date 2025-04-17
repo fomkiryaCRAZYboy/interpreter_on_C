@@ -1,13 +1,15 @@
 #include "lexer.h"
+#include <stdlib.h>
+#include "lexer_test.h"
 
 const char* get_type_of_token(TOKEN_TYPE type) {
     switch (type) {
-        case TOKEN_value:           return "VAL";
+        case TOKEN_variable:        return "VAR";
         case TOKEN_number:          return "NUM";
         case TOKEN_math_operator:   return "MATH_OP";
         case TOKEN_open_paren:      return "OPEN_PAR";
         case TOKEN_close_paren:     return "CLOSE_OP";
-        case TOKEN_eof:             return "EOF";
+        case TOKEN_end:             return "END";
         case TOKEN_assign:          return "ASSIGN";
         case TOKEN_semicolon:       return "SEMICOL";
         case TOKEN_comma:           return "COMMA";
@@ -18,12 +20,25 @@ const char* get_type_of_token(TOKEN_TYPE type) {
     }
 }
 
+extern int tokens_count;
+extern TOKEN stream[250];
+
 //функция для вывода сформированного потока токенов
-void debug_print_stream(TOKEN stream[]){
-    for(int i = 0; i < sizeof(stream) / sizeof(*stream); i++){
+void debug_print_stream(){
+    for(int i = 0; i < tokens_count; i++){
         //будет выведен тип токена и само значение. Пример: [NUM](5)
-        printf("[%s], (%s)", get_type_of_token(stream[i].type), stream[i].text);
-        printf(", ");
+        printf("[%s], (%s), ", get_type_of_token(stream[i].type), stream[i].text);
+    }
+}
+
+
+//очищаю поток ото всех токенов
+//освобождаю память занятю текстом токена
+void free_stream(){
+    for(int i = 0; i < tokens_count; i++) {
+        free(stream[i].text);
+        stream[i].text = NULL;
+        stream[i].type = 0;
     }
 }
 

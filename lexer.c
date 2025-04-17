@@ -9,14 +9,14 @@
 #define MAX_VARIABLE_LEN 25 //максимальная длина символов для переменной
 
 TOKEN stream[STREAM_SIZE] = {0};  // массив для потока токенов
-static int tokens_count = 0;  //количество токенов в потоке
+int tokens_count = 0;  //количество токенов в потоке
 
 
 //добавляю созданный токен в поток (массив stream)
-void add_token(TOKEN* token) {
+TOKEN_ADD_STATUS add_token(TOKEN* token) {
     if(tokens_count >= STREAM_SIZE) {
         printf("ERROR: Token stream overflow\n");
-        return;
+        return Failed_Add;
     }
 
     stream[tokens_count].type = token -> type;
@@ -29,7 +29,7 @@ TOKEN* create_token(const TOKEN_TYPE type, const char* text){
 
     if(new_token == NULL) {
         printf("ERROR: Memory error\n");
-        return;
+        return NULL;
     }
 
     new_token -> type = type;
@@ -39,7 +39,7 @@ TOKEN* create_token(const TOKEN_TYPE type, const char* text){
     if(!new_token -> text) {
         free(new_token);  //освобождаю память, занятую токеном, если не удалось выделить память под текст токена
         printf("ERROR: Memory error\n");
-        return;
+        return NULL;
     }
 
     strcpy(new_token -> text, text);
@@ -55,7 +55,7 @@ void free_token(TOKEN* token){
 }
 
 //токенизация, разбиение строки кода на токены для формирование потока 
-void tokenize(const char* code_string) {
+TOKENIZATION_STATUS tokenize(char* code_string) {
     char* str = code_string;
     while(*str) {
         //пропуск незначащих пробелов
@@ -77,25 +77,34 @@ void tokenize(const char* code_string) {
 
             if(isalpha(*str)){
                 printf("ERROR: Max variable length = 25\n");
-                return;
+                return Failed_Tokenization;
             }
 
             //проверяю введенную пользователем лексему на принадлежность к ключевым словам
             if(strcmp(varaible, "end") == 0){
                 TOKEN* end_token = create_token(TOKEN_end, "end");
-                add_token(end_token);
+                if(add_token(end_token) != Successful_Add) {
+                    printf("ERROR: Failed to add token");
+                    return Failed_Tokenization;
+                }
                 free(end_token);
             }
 
             else if(strcmp(varaible, "print") == 0){
                 TOKEN* print_token = create_token(TOKEN_print, "print");
-                add_token(print_token);
+                if(add_token(print_token) != Successful_Add) {
+                    printf("ERROR: Failed to add token");
+                    return Failed_Tokenization;
+                }
                 free(print_token);
             }
 
             else{
             TOKEN* var_token = create_token(TOKEN_variable, varaible);
-            add_token(var_token);
+            if(add_token(var_token) != Successful_Add) {
+                printf("ERROR: Failed to add token");
+                return Failed_Tokenization;
+            }
             free_token(var_token);
             }
         }
@@ -111,7 +120,10 @@ void tokenize(const char* code_string) {
             number[i] = '\0';
             
             TOKEN* num_token = create_token(TOKEN_number, number);  //создали токен числа
-            add_token(num_token);  //добавили токен в поток
+            if(add_token(num_token) != Successful_Add) {
+                printf("ERROR: Failed to add token");
+                return Failed_Tokenization;
+            }  //добавили токен в поток
             free_token(num_token); //освободили память, которую занимал  токен в куче
 
             //далее - следующая инетрация цикла, двигаемся далльше по строке кода
@@ -122,63 +134,90 @@ void tokenize(const char* code_string) {
             switch(*str) {
                 case '+': {
                     TOKEN* plus_token = create_token(TOKEN_math_operator, "+");
-                    add_token(plus_token);
+                    if(add_token(plus_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(plus_token);
                     str++;
                     break;
                 }
                 case '-': {
                     TOKEN* minus_token = create_token(TOKEN_math_operator, "-");
-                    add_token(minus_token);
+                    if(add_token(minus_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(minus_token);
                     str++;
                     break;
                 }
                 case '*': {
                     TOKEN* multiply_token = create_token(TOKEN_math_operator, "*");
-                    add_token(multiply_token);
+                    if(add_token(multiply_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(multiply_token);
                     str++;
                     break;
                 }
                 case '/': {
                     TOKEN* divide_token = create_token(TOKEN_math_operator, "/");
-                    add_token(divide_token);
+                    if(add_token(divide_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(divide_token);
                     str++;
                     break;
                 }
                 case '(': {
                     TOKEN* open_paren_token = create_token(TOKEN_open_paren, "(");
-                    add_token(open_paren_token);
+                    if(add_token(open_paren_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(open_paren_token);
                     str++;
                     break;
                 }
                 case ')': {
                     TOKEN* close_paren_token = create_token(TOKEN_close_paren, ")");
-                    add_token(close_paren_token);
+                    if(add_token(close_paren_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(close_paren_token);
                     str++;
                     break;
                 }
                 case '=': {
                     TOKEN* assign_token = create_token(TOKEN_assign, "=");
-                    add_token(assign_token);
+                    if(add_token(assign_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(assign_token);
                     str++;
                     break;
                 }
                 case ';': {
                     TOKEN* semicolon_token = create_token(TOKEN_semicolon, ";");
-                    add_token(semicolon_token);
+                    if(add_token(semicolon_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(semicolon_token);
                     str++;
                     break;
                 }
                 case ',': {
                     TOKEN* comma_token = create_token(TOKEN_comma, ",");
-                    add_token(comma_token);
+                    if(add_token(comma_token) != Successful_Add) {
+                        printf("ERROR: Failed to add token");
+                        return Failed_Tokenization;
+                    }
                     free_token(comma_token);
                     str++;
                     break;
@@ -186,7 +225,7 @@ void tokenize(const char* code_string) {
                 
                 default: {
                     printf("ERROR: Syntax error\n");
-                    return;
+                    return Failed_Tokenization;
                 }
             }
         }
