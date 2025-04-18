@@ -20,7 +20,17 @@ TOKEN_ADD_STATUS add_token(TOKEN* token) {
     }
 
     stream[tokens_count].type = token -> type;
-    stream[tokens_count++].text = token -> text;
+    stream[tokens_count].text = malloc(strlen(token -> text) + 1);
+    //здесь выделяется память под текст токена уже в потоке 
+
+    if(stream[tokens_count].text == NULL) {
+        printf("ERROR: Memory error\n");
+        return Failed_Add;
+    }
+
+    strcpy(stream[tokens_count++].text, token -> text);
+
+    return Successful_Add;
 }
 
 //создаю новый токен в куче и вношу в него соответствующие данные
@@ -71,7 +81,8 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
 
             int i = 0;
             while(isalpha(*str) && i < MAX_VARIABLE_LEN - 1){
-                varaible[i++] = *str++;
+                varaible[i] = *str++;
+                i++;
             }
             varaible[i] = '\0';
 
@@ -84,7 +95,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             if(strcmp(varaible, "end") == 0){
                 TOKEN* end_token = create_token(TOKEN_end, "end");
                 if(add_token(end_token) != Successful_Add) {
-                    printf("ERROR: Failed to add token");
+                    printf("ERROR: Failed to add token(end)\n");
                     return Failed_Tokenization;
                 }
                 free(end_token);
@@ -93,7 +104,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             else if(strcmp(varaible, "print") == 0){
                 TOKEN* print_token = create_token(TOKEN_print, "print");
                 if(add_token(print_token) != Successful_Add) {
-                    printf("ERROR: Failed to add token");
+                    printf("ERROR: Failed to add token(print)\n");
                     return Failed_Tokenization;
                 }
                 free(print_token);
@@ -102,7 +113,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             else{
             TOKEN* var_token = create_token(TOKEN_variable, varaible);
             if(add_token(var_token) != Successful_Add) {
-                printf("ERROR: Failed to add token");
+                printf("ERROR: Failed to add token(var)\n");
                 return Failed_Tokenization;
             }
             free_token(var_token);
@@ -114,14 +125,15 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             char number[32];
 
             int i = 0;
-            for(; isdigit(*str) && i < 31; i++){
+            while(isdigit(*str) && i < 31){
                 number[i] = *str++;
+                i++;
             }
             number[i] = '\0';
             
             TOKEN* num_token = create_token(TOKEN_number, number);  //создали токен числа
             if(add_token(num_token) != Successful_Add) {
-                printf("ERROR: Failed to add token");
+                printf("ERROR: Failed to add token(num)\n");
                 return Failed_Tokenization;
             }  //добавили токен в поток
             free_token(num_token); //освободили память, которую занимал  токен в куче
@@ -230,5 +242,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             }
         }
     }
-
+    return Successful_Tokenization;
+    //после успешной обработки сторки возвращаем Successful_Tokenization
+    //токенизация прошла успешно
 } 

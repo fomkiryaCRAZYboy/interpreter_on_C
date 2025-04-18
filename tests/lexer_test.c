@@ -8,7 +8,7 @@ const char* get_type_of_token(TOKEN_TYPE type) {
         case TOKEN_number:          return "NUM";
         case TOKEN_math_operator:   return "MATH_OP";
         case TOKEN_open_paren:      return "OPEN_PAR";
-        case TOKEN_close_paren:     return "CLOSE_OP";
+        case TOKEN_close_paren:     return "CLOSE_PAR";
         case TOKEN_end:             return "END";
         case TOKEN_assign:          return "ASSIGN";
         case TOKEN_semicolon:       return "SEMICOL";
@@ -25,9 +25,12 @@ extern TOKEN stream[250];
 
 //функция для вывода сформированного потока токенов
 void debug_print_stream(){
+    printf("---------------------\n");
+    printf("tokens_count = %d\n", tokens_count);
+    printf("---------------------\n");
     for(int i = 0; i < tokens_count; i++){
         //будет выведен тип токена и само значение. Пример: [NUM](5)
-        printf("[%s], (%s), ", get_type_of_token(stream[i].type), stream[i].text);
+        printf("[%s](%s), ", get_type_of_token(stream[i].type), stream[i].text);
     }
 }
 
