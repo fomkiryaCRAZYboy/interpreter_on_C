@@ -121,7 +121,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
         }
 
         //если символ - цифра
-        if(isdigit(*str)){
+        else if(isdigit(*str)){
             char number[32];
 
             int i = 0;

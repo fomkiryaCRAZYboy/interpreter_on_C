@@ -4,7 +4,7 @@
 int main(void)
 {
     
-    if(tokenize("5,0,1,2") != Successful_Tokenization) {
+    if(tokenize("var = 123; print(var);") != Successful_Tokenization) {
         printf("Tokenization Failed\n");
         return 1;
     }
@@ -13,6 +13,7 @@ int main(void)
 
     return 0;
 }
+
 
 /*
 ----PASSED THE TEST----
@@ -23,7 +24,10 @@ int main(void)
 
 ";;;;;"     : [SEMICOL](;), [SEMICOL](;), [SEMICOL](;), [SEMICOL](;), [SEMICOL](;)
 
-"5,0,1,2"
+"5,0,1,2"   : [NUM](5), [COMMA](,), [NUM](0), [COMMA](,), [NUM](1), [COMMA](,), [NUM](2)
+
+
+"x = 5; y = x + 2; end;" : [VAR](x), [ASSIGN](=), [NUM](5), [SEMICOL](;), [VAR](y), [ASSIGN](=), [VAR](x), [MATH_OP](+), [NUM](2), [SEMICOL](;), [END](end), [SEMICOL](;)
 
 ............................
 nums:
@@ -42,6 +46,14 @@ other_symbols:
 "="
 ","
 ";"
+............................
+keywords:
+"end" - [END](end)
+"print" - [PRINT](print)
+............................
+variables:
+"var"
+"x"
 
 */
 
