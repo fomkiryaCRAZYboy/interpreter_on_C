@@ -4,7 +4,7 @@
 int main(void)
 {
     
-    if(tokenize("print(x)") != Successful_Tokenization) {
+    if(tokenize("x = 2 * (5 + y)") != Successful_Tokenization) {
         printf("Tokenization Failed\n");
         return 1;
     }
