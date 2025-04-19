@@ -1,6 +1,6 @@
-#include "lexer.h"
-#include <stdlib.h>
+#include "../../src/lexer/lexer.h"
 #include "lexer_test.h"
+#include <stdlib.h>
 
 const char* get_type_of_token(TOKEN_TYPE type) {
     switch (type) {

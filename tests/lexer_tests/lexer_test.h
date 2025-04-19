@@ -1,7 +1,7 @@
 #ifndef TESTS_H
 #define TESTS_H
 
-#include "lexer.h"
+#include "../../src/lexer/lexer.h"
 #include <stdio.h>
 
 const char* get_type_of_token(TOKEN_TYPE type);

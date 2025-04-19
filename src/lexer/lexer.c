@@ -147,7 +147,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '+': {
                     TOKEN* plus_token = create_token(TOKEN_math_operator, "+");
                     if(add_token(plus_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(plus_token);
@@ -157,7 +157,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '-': {
                     TOKEN* minus_token = create_token(TOKEN_math_operator, "-");
                     if(add_token(minus_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(minus_token);
@@ -167,7 +167,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '*': {
                     TOKEN* multiply_token = create_token(TOKEN_math_operator, "*");
                     if(add_token(multiply_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(multiply_token);
@@ -177,7 +177,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '/': {
                     TOKEN* divide_token = create_token(TOKEN_math_operator, "/");
                     if(add_token(divide_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(divide_token);
@@ -187,7 +187,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '(': {
                     TOKEN* open_paren_token = create_token(TOKEN_open_paren, "(");
                     if(add_token(open_paren_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(open_paren_token);
@@ -197,7 +197,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case ')': {
                     TOKEN* close_paren_token = create_token(TOKEN_close_paren, ")");
                     if(add_token(close_paren_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(close_paren_token);
@@ -207,7 +207,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case '=': {
                     TOKEN* assign_token = create_token(TOKEN_assign, "=");
                     if(add_token(assign_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(assign_token);
@@ -217,7 +217,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case ';': {
                     TOKEN* semicolon_token = create_token(TOKEN_semicolon, ";");
                     if(add_token(semicolon_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(semicolon_token);
@@ -227,7 +227,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 case ',': {
                     TOKEN* comma_token = create_token(TOKEN_comma, ",");
                     if(add_token(comma_token) != Successful_Add) {
-                        printf("ERROR: Failed to add token");
+                        printf("ERROR: Failed to add token\n");
                         return Failed_Tokenization;
                     }
                     free_token(comma_token);

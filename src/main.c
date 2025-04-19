@@ -1,10 +1,10 @@
-#include "lexer.h"
-#include "tests/lexer_test.h"
+#include "lexer/lexer.h"
+#include "../tests/lexer_tests/lexer_test.h"
 
 int main(void)
 {
     
-    if(tokenize("var = 123; print(var);") != Successful_Tokenization) {
+    if(tokenize("print(x)") != Successful_Tokenization) {
         printf("Tokenization Failed\n");
         return 1;
     }
@@ -28,6 +28,8 @@ int main(void)
 
 
 "x = 5; y = x + 2; end;" : [VAR](x), [ASSIGN](=), [NUM](5), [SEMICOL](;), [VAR](y), [ASSIGN](=), [VAR](x), [MATH_OP](+), [NUM](2), [SEMICOL](;), [END](end), [SEMICOL](;)
+
+"var = 123; print(var);" : [VAR](var), [ASSIGN](=), [NUM](123), [SEMICOL](;), [PRINT](print), [OPEN_PAR]((), [VAR](var), [CLOSE_PAR]()), [SEMICOL](;)
 
 ............................
 nums:
