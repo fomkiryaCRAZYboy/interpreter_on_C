@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STREAM_SIZE 250 //максимальное количество токенов в строке
+#define STREAM_SIZE 2500 //максимальное количество токенов в коде
 #define MAX_VARIABLE_LEN 25 //максимальная длина символов для переменной
 
 TOKEN stream[STREAM_SIZE] = {0};  // массив для потока токенов
