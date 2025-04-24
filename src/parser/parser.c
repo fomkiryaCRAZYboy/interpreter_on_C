@@ -1,12 +1,11 @@
 #include "parser.h"
 #include <string.h>
 #include <stdlib.h>
-#include "../lexer/lexer.c" //для MAX_VARIABLE_LEN
+#include <stdio.h>
 
 #define MAX_VARIABLES_COUNT 100 //можно объявить до ста переменных в коде
-#define MAX_AST_COUNT   250 // до 250 узлов может быть в программе
 
-AST AST_array[MAX_AST_COUNT] = {0};
+AST AST_array[MAX_AST_COUNT];
 int ast_count = 0;
 
 
@@ -24,13 +23,26 @@ bool check_variable_exists(const char* name){
     return exists;
 }
 
-void add_variable(const char* name, const int value){
+VAR_ADD_STATUS add_variable(const char* name, const int value){
+    if(variables_count >= MAX_VARIABLES_COUNT){
+        printf("ERROR: Too many variables declared\n");
+        return Failed_add_var;
+    }
+
     VARIABLE var;
-    var.name = name;
+
+    var.name = malloc(strlen(name) + 1);
+    if(!var.name){
+        printf("ERROR: Memory error");
+        return Failed_add_var;
+    }
+    strcpy(var.name, name);
+
     var.value = value;
 
     //сразу добавляем переменную в массив и увеличиваем variables_count
     variables_array[variables_count++] = var;
+    return Successful_add_var;
 }
 
 
@@ -68,15 +80,29 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             printf("ERROR: Memory error\n");
             return NULL;
         }
-        
-        token->type = tokens[0].type;
+
+        if(tokens[0].type == TOKEN_variable){
+            if(!check_variable_exists(tokens[0].text)){
+                printf("ERROR: variable '%s' not declared\n", tokens[0].text);
+            }
+        }
+
+        //в любом случае возвращаем токен числа
+        token->type = TOKEN_number;
         token->text = malloc(strlen(tokens[0].text) + 1);
         if (!token->text) {
             free(token);
             printf("ERROR: Memory error\n");
             return NULL;
         }
-        strcpy(token->text, tokens[0].text);
+
+        int val;
+        for(int i = 0; i < variables_count;i++) {
+            if(strcmp(variables_array[i].name, tokens[0].text) == 0){
+                val = variables_array[i].value;
+            }
+        }
+        sprintf(token -> text, "%d", val);
         
         return token;
     }
@@ -409,6 +435,41 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             /*
             добавляем в массив AST 'end' и завершаем цикл (все что находится псле end обработано не будет)
             */
+
+            //в качестве узла выступает токен 'end', правый и левый лепестки - незначащие пробелы (заглушки)
+            TOKEN* end_token = create_token(TOKEN_end, "end");
+            if(!end_token){
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            }
+            TOKEN* stub = create_token(TOKEN_space, " ");
+            if(!stub){
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            }
+            TOKEN* stub2 = create_token(TOKEN_space, " ");
+            if(!stub2){
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            }
+
+            AST* end_ast = create_AST(end_token, stub, stub2);
+
+            if(ast_count >= MAX_AST_COUNT){
+                printf("ERROR in %d line: Too many AST nodes", line_number);
+                free_token(end_token);
+                free_token(stub);
+                free_token(stub2);
+                return Failed_Parsing;
+            }
+
+            AST_array[ast_count++] = *end_ast;
+            free_token(end_token);
+            free_token(stub);
+            free_token(stub2);
+
+            line_number++;
+
             break;
         }
 
@@ -483,6 +544,8 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 free(right_token->text);
                 free(right_token);
                 free(ast);
+
+                line_number++;
             }
         }
     }

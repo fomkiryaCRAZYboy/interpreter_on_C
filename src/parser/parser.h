@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include "../lexer/lexer.h"
-
+#define MAX_AST_COUNT   250 // до 250 узлов может быть в программе
 
 //определяю тип возвращаемого значения для основной функции парсинга
 typedef enum {
@@ -15,7 +15,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count); //основная ф�
 
 
  
-typedef struct {
+typedef struct{
     TOKEN node; //узел, связывающий два лепестка (может быть '=' или любая мат. операция)
     TOKEN right; //правый лепесток
     TOKEN left;  //левый лепесток
@@ -34,8 +34,15 @@ typedef struct {
     int value; //значение переменной (пока только целочисленные)
 } VARIABLE;
 
+
+typedef enum {
+    Successful_add_var,
+    Failed_add_var,
+} VAR_ADD_STATUS;
+
 //создание переменной
-void add_variable(const char* name, const int value); 
+VAR_ADD_STATUS add_variable(const char* name, const int value); 
+
 
 //проверка наличия переменной
 bool check_variable_exists(const char* name);

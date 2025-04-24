@@ -1,6 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#define MAX_VARIABLE_LEN 25 //максимальная длина символов для переменной
+
 //данное перечисление будет использоваться в качестве типа возвращаемого значения токенизации
 typedef enum {
     Successful_Tokenization,

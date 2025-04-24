@@ -1,14 +1,26 @@
 #include "lexer/lexer.h"
 #include "../tests/lexer_tests/lexer_test.h"
+#include "../tests/parser_tests/parser_test.h"
+
+extern int tokens_count;
+extern TOKEN stream[250];
 
 int main(void)
 {
     
-    if(tokenize("x = 2 * (5 + y)") != Successful_Tokenization) {
+    if(tokenize("x = 2;") != Successful_Tokenization) {
         printf("Tokenization Failed\n");
         return 1;
     }
     debug_print_stream();
+
+    if(parsing(stream, tokens_count) != Successful_Parsing) {
+        printf("Parsing Failed\n");
+        return 1;
+    }
+
+    debug_print_AST_array();
+
     free_stream();
 
     return 0;
