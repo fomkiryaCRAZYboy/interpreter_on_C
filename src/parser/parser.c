@@ -4,7 +4,11 @@
 #include "../lexer/lexer.c" //для MAX_VARIABLE_LEN
 
 #define MAX_VARIABLES_COUNT 100 //можно объявить до ста переменных в коде
-#define MAX_AST_COUNT   50 // до 50 узлов может быть в одной строке
+#define MAX_AST_COUNT   250 // до 250 узлов может быть в программе
+
+AST AST_array[MAX_AST_COUNT] = {0};
+int ast_count = 0;
+
 
 VARIABLE variables_array[MAX_VARIABLES_COUNT] = {0}; //массив переменных, будет заполняться во время создания переменных
 int variables_count = 0;
@@ -20,35 +24,32 @@ bool check_variable_exists(const char* name){
     return exists;
 }
 
-AST AST_array[MAX_AST_COUNT] = {0};
+void add_variable(const char* name, const int value){
+    VARIABLE var;
+    var.name = name;
+    var.value = value;
 
-AST* create_AST(const TOKEN node, const TOKEN* right, const char* left){
+    //сразу добавляем переменную в массив и увеличиваем variables_count
+    variables_array[variables_count++] = var;
+}
+
+
+
+AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left){
+    if (!node || !right || !left) {
+        printf("ERROR: Null token passed to create_AST\n");
+        return NULL;
+    }
+
     AST* new_ast = malloc(sizeof(AST));
     if(!new_ast){
         printf("ERROR: Memory error\n");
         return NULL;
     }
 
-    new_ast -> node = node;
-
-    new_ast -> right = malloc(sizeof(TOKEN));
-    if(!new_ast -> right) {
-        free(new_ast);
-
-        printf("ERROR: Memory error\n");
-        return NULL;
-    }
-    new_ast -> right = right;
-
-    new_ast -> left = malloc(strlen(left) + 1);
-    if(!new_ast -> left){
-        free(new_ast -> right);
-        free(new_ast);
-
-        printf("ERROR: Memory error\n");
-        return NULL;
-    }
-    strcpy(new_ast -> left, left);
+    new_ast -> node = *node;
+    new_ast -> right = *right;
+    new_ast -> left = *left;
 
     return new_ast;
 }
@@ -141,20 +142,68 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                 return NULL;
             }
 
-            // Проверяем, что оба операнда - числа
-            if (left_result->type != TOKEN_number || right_result->type != TOKEN_number) {
-                printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                free(left_result->text);
-                free(right_result->text);
-                free(left_result);
-                free(right_result);
-                return NULL;
+            // Проверяем, что оба операнда - числа или переменные
+            int left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
+            int right_num;
+
+            if(left_result -> type != TOKEN_number){
+                if(left_result -> type != TOKEN_variable){
+                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+                }
+                else {
+                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
+                    if(!(check_variable_exists(left_result -> text))){
+                        printf("ERROR: Variable '%s' not declared", left_result -> text);
+                        return NULL;
+                    }
+
+                    //записываем численное значение переменной в left_num
+                    for(int i = 0; i < variables_count;i ++){
+                        if(variables_array[i].name == left_result -> text){
+                            left_num = variables_array[i].value;
+                        }
+                    }
+                }
             }
 
+            //если токен - число, то берем его значение
+            left_num = atoi(left_result -> text);
+
+            if(right_result -> type != TOKEN_number){
+                if(right_result -> type != TOKEN_variable){
+                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+                }
+                else {
+                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
+                    if(!(check_variable_exists(right_result -> text))){
+                        printf("ERROR: Variable '%s' not declared", right_result -> text);
+                        return NULL;
+                    }
+
+                    //записываем численное значение переменной в left_num
+                    for(int i = 0; i < variables_count;i ++){
+                        if(variables_array[i].name == right_result -> text){
+                            right_num = variables_array[i].value;
+                        }
+                    }
+                }
+            }
+
+            //если токен - число, то берем его значение
+            right_num = atoi(right_result -> text);
+
             // Выполняем операцию
-            int left_num = atoi(left_result->text);
-            int right_num = atoi(right_result->text);
-            int result;
+            double result;
             
             if (tokens[i].text == "*") {
                 result = left_num * right_num;
@@ -167,7 +216,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                     free(right_result);
                     return NULL;
                 }
-                result = left_num / right_num;
+                result = left_num / (double)right_num;
             }
 
             // Освобождаем память
@@ -222,18 +271,67 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                 return NULL;
             }
 
-            if (left_result->type != TOKEN_number || right_result->type != TOKEN_number) {
-                printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                free(left_result->text);
-                free(right_result->text);
-                free(left_result);
-                free(right_result);
-                return NULL;
+            // Проверяем, что оба операнда - числа или переменные
+            int left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
+            int right_num;
+
+            if(left_result -> type != TOKEN_number){
+                if(left_result -> type != TOKEN_variable){
+                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+                }
+                else {
+                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
+                    if(!(check_variable_exists(left_result -> text))){
+                        printf("ERROR: Variable '%s' not declared", left_result -> text);
+                        return NULL;
+                    }
+
+                    //записываем численное значение переменной в left_num
+                    for(int i = 0; i < variables_count;i ++){
+                        if(variables_array[i].name == left_result -> text){
+                            left_num = variables_array[i].value;
+                        }
+                    }
+                }
             }
 
-            double left_num = atof(left_result->text);
-            double right_num = atof(right_result->text);
-            double result;
+            //если токен - число, то берем его значение
+            left_num = atoi(left_result -> text);
+
+            if(right_result -> type != TOKEN_number){
+                if(right_result -> type != TOKEN_variable){
+                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+                }
+                else {
+                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
+                    if(!(check_variable_exists(right_result -> text))){
+                        printf("ERROR: Variable '%s' not declared", right_result -> text);
+                        return NULL;
+                    }
+
+                    //записываем численное значение переменной в left_num
+                    for(int i = 0; i < variables_count;i ++){
+                        if(variables_array[i].name == right_result -> text){
+                            right_num = variables_array[i].value;
+                        }
+                    }
+                }
+            }
+
+            //если токен - число, то берем его значение
+            right_num = atoi(right_result -> text);
+
+            int result;
             
             if (tokens[i].text == "+") {
                 result = left_num + right_num;
@@ -272,6 +370,8 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
     return NULL;
 }
 
+
+
 PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
 {
     int semicolon_count = 0;
@@ -307,7 +407,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 return Failed_Parsing;
             }
             /*
-            добавляем в массив выражений 'end' и завершаем цикл (все что находится псле end обработано не будет)
+            добавляем в массив AST 'end' и завершаем цикл (все что находится псле end обработано не будет)
             */
             break;
         }
@@ -340,30 +440,49 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 if(line[0].type != TOKEN_variable){
                     printf("ERROR in %d line: '%s' is not lvalue\n", line_number, line[0].text);
                     return Failed_Parsing;
-                } 
-
-                char left[MAX_VARIABLE_LEN] = {'\0'};
-                strcpy(left, line[0].text);
+                }       
 
                 TOKEN right[150];
-                int j = 0;
+                int j = 0;  //кол-во токенов после '='
                 for (int i = assingment_idx + 1; i < tokens_count_in_line; i++) {
-                    right[j] = line[i];
+                    right[j++] = line[i];
                 }
 
+                //парсим rvlaue (массив токенов после знака '=')
+                TOKEN* right_token = parse_expression(right, j);
+                if(!right_token){
+                    printf("ERROR in %d line: Failed to parse expression\n", line_number);
+                    return Failed_Parsing;
+                }
+
+                TOKEN assign_token;
+                strcpy(assign_token.text, "=");
+                assign_token.type = TOKEN_assign;
+
                 /*необходимо сформировать AST с корнем в виде токена '=' и лепестками в виде lvalue и rvalue*/
-                AST* ast = create_AST((TOKEN){.type = TOKEN_assign, .text = "="}, right, left);
+                AST* ast = create_AST(&assign_token, right_token, &line[0]);
                 if(ast == NULL){
                     printf("ERROR in %d line: Failed to create AST", line_number);
                     return Failed_Parsing;
                 }
 
 
-                //ПОСЛЕ ТОГО, КАК СФОРМИРОВАЛИ AST ДЛЯ RVALUE:
-                //если первый токен - переменная, проверяю её наличие в массиве переменных
-                if(!check_variable_exists()) { //если такой переменной не существует - создаём её и добавляем к массиву И УВЕЛИЧИВАЕМ variables_count
-                    
+                //ПОСЛЕ ТОГО, КАК СФОРМИРОВАЛИ AST для этой строки:
+                //добавляем AST в массив 
+                
+                if(ast_count >= MAX_AST_COUNT){
+                    printf("ERROR in %d line: Too many AST nodes", line_number);
+                    free(right_token->text);
+                    free(right_token);
+                    free(ast);
+                    return Failed_Parsing;
                 }
+
+                AST_array[ast_count++] = *ast;  //копируем данные
+
+                free(right_token->text);
+                free(right_token);
+                free(ast);
             }
         }
     }

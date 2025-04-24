@@ -11,20 +11,21 @@ typedef enum {
     Failed_Parsing
 } PARSING_STATUS;
 
-PARSING_STATUS parsing(TOKEN stream[], int tokens_count); //основна функция парсинга (разбивает массив токенов по строкам и анализирует их)
-
+PARSING_STATUS parsing(TOKEN stream[], int tokens_count); //основная функция парсинга (разбивает массив токенов по строкам и анализирует их)
 
 
  
 typedef struct {
     TOKEN node; //узел, связывающий два лепестка (может быть '=' или любая мат. операция)
-    TOKEN* right; //правый лепесток
-    char* left;  //левый лепесток
+    TOKEN right; //правый лепесток
+    TOKEN left;  //левый лепесток
 } AST;
 
-AST* create_AST(const TOKEN node, const TOKEN* right, const char* left);
+AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left);
 
-TOKEN* parse_expession(TOKEN tokens[], int tokens_count);
+TOKEN* parse_expression(TOKEN tokens[], int tokens_count);
+
+
 
 
 //структура переменной
@@ -34,7 +35,7 @@ typedef struct {
 } VARIABLE;
 
 //создание переменной
-VARIABLE create_variable(const char* name, const int value); 
+void add_variable(const char* name, const int value); 
 
 //проверка наличия переменной
 bool check_variable_exists(const char* name);
