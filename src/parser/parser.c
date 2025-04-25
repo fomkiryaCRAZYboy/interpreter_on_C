@@ -63,6 +63,39 @@ AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left){
     new_ast -> right = *right;
     new_ast -> left = *left;
 
+    if(node ->text){
+        new_ast -> node.text = malloc(strlen(node ->text) + 1);
+        if(!new_ast -> node.text){
+            free(new_ast);
+            printf("ERROR: Memory error\n");
+            return NULL;
+        }
+        strcpy(new_ast -> node.text, node->text);
+    }
+
+    if(right ->text){
+        new_ast -> right.text = malloc(strlen(right ->text) + 1);
+        if(!new_ast -> right.text){
+            free(new_ast -> node.text);
+            free(new_ast);
+            printf("ERROR: Memory error\n");
+            return NULL;
+        }
+        strcpy(new_ast -> right.text, right->text);
+    }
+
+    if(left ->text){
+        new_ast -> left.text = malloc(strlen(left ->text) + 1);
+        if(!new_ast -> left.text){
+            free(new_ast -> right.text);
+            free(new_ast -> node.text);
+            free(new_ast);
+            printf("ERROR: Memory error\n");
+            return NULL;
+        }
+        strcpy(new_ast -> left.text, left->text);
+    }
+
     return new_ast;
 }
 
@@ -73,38 +106,54 @@ AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left){
 Фунция вернёт токен числа 21 (при условии, что y = 2),
 */
 TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
-    if (tokens_count == 1) {
-        // Базовый случай: если токен один, возвращаем его
-        TOKEN* token = malloc(sizeof(TOKEN));
-        if (!token) {
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
+    if (tokens == NULL || tokens_count == 0) {
+        printf("ERROR: Empty tokens array\n");
+        return NULL;
+    }
 
+    if (tokens_count == 1) {
+        // Базовый случай: если токен один, возвращаем его 
         if(tokens[0].type == TOKEN_variable){
             if(!check_variable_exists(tokens[0].text)){
                 printf("ERROR: variable '%s' not declared\n", tokens[0].text);
+                return NULL;
             }
+
+            int val;
+            bool found = false;
+            for(int i = 0; i < variables_count;i++) {
+                if(strcmp(variables_array[i].name, tokens[0].text) == 0){
+                    val = variables_array[i].value;
+                    found = true;
+                    break;
+                }
+            }
+
+            if(!found){
+                printf("ERROR: Variable '%s' not found\n", tokens[0].text);
+                return NULL;
+            }
+            
+            char text_val[] = {0};
+            snprintf(text_val, 31, "%d", val);
+
+            TOKEN* token = create_token(TOKEN_number, text_val);
+            return token;
         }
 
-        //в любом случае возвращаем токен числа
-        token->type = TOKEN_number;
-        token->text = malloc(strlen(tokens[0].text) + 1);
-        if (!token->text) {
-            free(token);
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
+        if(tokens[0].type == TOKEN_number){
+            size_t text_len = strlen(tokens[0].text);
 
-        int val;
-        for(int i = 0; i < variables_count;i++) {
-            if(strcmp(variables_array[i].name, tokens[0].text) == 0){
-                val = variables_array[i].value;
+            char buff[31];
+            strcpy(buff, tokens[0].text);
+
+            TOKEN* token_num = create_token(TOKEN_number, buff); 
+            if(!token_num){
+                printf("ERROR: Memory error\n");
+                return NULL;
             }
+            return token_num;
         }
-        sprintf(token -> text, "%d", val);
-        
-        return token;
     }
 
     // Проверка скобок
@@ -138,13 +187,17 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             subtokens[count++] = tokens[open_par_idx++];
         }
 
+        for(int i = 0; i < count; i++){
+            printf("%s", subtokens[i].text);
+        }
+
         return parse_expression(subtokens, count);
     }
 
     // Обработка математических операций с учётом приоритетов
     // Сначала умножение и деление
     for (int i = 0; i < tokens_count; i++) {
-        if (tokens[i].type == TOKEN_math_operator && (tokens[i].text == "*" || tokens[i].text == "/")) {
+        if (tokens[i].type == TOKEN_math_operator && (strcmp(tokens[i].text, "*") == 0 || strcmp(tokens[i].text, "/") == 0)) {
             TOKEN left_part[100], right_part[100];
             int left_count = 0, right_count = 0;
 
@@ -231,7 +284,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             // Выполняем операцию
             double result;
             
-            if (tokens[i].text == "*") {
+            if (strcmp(tokens[i].text, "*") == 0) {
                 result = left_num * right_num;
             } else {
                 if (right_num == 0) {
@@ -260,7 +313,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             
             result_token->type = TOKEN_number;
             char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%d", result);
+            snprintf(buffer, sizeof(buffer), "%.2f", result);
             result_token->text = malloc(strlen(buffer) + 1);
             if (!result_token->text) {
                 free(result_token);
@@ -275,7 +328,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
 
     // Затем сложение и вычитание
     for (int i = 0; i < tokens_count; i++) {
-        if (tokens[i].type == TOKEN_math_operator && (tokens[i].text == "-" || tokens[i].text == "+")) {
+        if (tokens[i].type == TOKEN_math_operator && (strcmp(tokens[i].text, "+") == 0 || strcmp(tokens[i].text, "-") == 0)) {
             TOKEN left_part[100], right_part[100];
             int left_count = 0, right_count = 0;
 
@@ -359,7 +412,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
 
             int result;
             
-            if (tokens[i].text == "+") {
+            if (strcmp(tokens[i].text, "+") == 0) {
                 result = left_num + right_num;
             } else {
                 result = left_num - right_num;
@@ -418,6 +471,10 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 continue;
             }
             line[j++] = stream[k++];
+        }
+        //если цикл while закончился и k < меньше кол-ва токенов, значит он прервался из-за знака ';' 
+        if(k < tokens_count){ //добавляем этот токен к строке
+            line[j++] = stream[k++];
         }    
         int tokens_count_in_line = j;  //опредеяем кол-во токенов в строке
 
@@ -444,11 +501,14 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             }
             TOKEN* stub = create_token(TOKEN_space, " ");
             if(!stub){
+                free_token(end_token);
                 printf("ERROR: Memory error\n");
                 return Failed_Parsing;
             }
             TOKEN* stub2 = create_token(TOKEN_space, " ");
             if(!stub2){
+                free_token(end_token);
+                free_token(stub);
                 printf("ERROR: Memory error\n");
                 return Failed_Parsing;
             }
@@ -505,8 +565,9 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
 
                 TOKEN right[150];
                 int j = 0;  //кол-во токенов после '='
-                for (int i = assingment_idx + 1; i < tokens_count_in_line; i++) {
-                    right[j++] = line[i];
+                for (int i = assingment_idx + 1; line[i].type != TOKEN_semicolon ; i++) {
+                    right[j] = line[i];
+                    j++;
                 }
 
                 //парсим rvlaue (массив токенов после знака '=')
@@ -516,12 +577,18 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                     return Failed_Parsing;
                 }
 
-                TOKEN assign_token;
-                strcpy(assign_token.text, "=");
-                assign_token.type = TOKEN_assign;
+                char buffer[] = "=";
+                TOKEN* assign_token = create_token(TOKEN_assign, buffer);
+                if(!assign_token){
+                    printf("ERROR: Memory error\n");
+                    return Failed_Parsing;
+                }
+
+                strcpy(assign_token->text, "=");
+                assign_token->type = TOKEN_assign;
 
                 /*необходимо сформировать AST с корнем в виде токена '=' и лепестками в виде lvalue и rvalue*/
-                AST* ast = create_AST(&assign_token, right_token, &line[0]);
+                AST* ast = create_AST(assign_token, right_token, &line[0]);
                 if(ast == NULL){
                     printf("ERROR in %d line: Failed to create AST", line_number);
                     return Failed_Parsing;
