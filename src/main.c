@@ -8,7 +8,7 @@ extern int tokens_count;
 int main(void)
 {
     
-    if(tokenize("x = 2 - 5 + 1;") != Successful_Tokenization) {
+    if(tokenize("x = (9-4);") != Successful_Tokenization) {
         printf("Tokenization Failed\n");
         return 1;
     }
@@ -26,5 +26,6 @@ int main(void)
     free_stream();
 
     return 0;
+    
 }
 

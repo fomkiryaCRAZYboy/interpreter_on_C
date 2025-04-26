@@ -179,19 +179,40 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
         int close_par_idx = tokens_count - 1;
         while (tokens[close_par_idx].type != TOKEN_close_paren) close_par_idx--;
 
-        open_par_idx++;
-        close_par_idx--;
-
         int count = 0;
-        while (count < 100 && open_par_idx <= close_par_idx) {
+        while (count < 100 && open_par_idx+1 <= close_par_idx-1) {
             subtokens[count++] = tokens[open_par_idx++];
         }
 
-        for(int i = 0; i < count; i++){
-            printf("%s", subtokens[i].text);
+        // сперва парсим то, что в скобках
+        TOKEN* paren_expression =  parse_expression(subtokens, count);
+
+        TOKEN updated_tokens[100];
+        int new_count = tokens_count - (count + 2);
+
+        int pos = 0;
+        for(int i = 0; i < open_par_idx; i++){
+            updated_tokens[pos++] = tokens[i];
         }
 
-        return parse_expression(subtokens, count);
+        updated_tokens[pos].type = paren_expression->type;
+
+        updated_tokens[pos].text = malloc(strlen(paren_expression->text) + 1);
+        if(!updated_tokens[pos].text) {
+            printf("ERROR: Memory error\n");
+            return NULL;
+        }
+        strcpy(updated_tokens[pos].text, paren_expression -> text);
+        int idx = pos;
+        pos++;
+
+        for(int i = close_par_idx + 1; i < tokens_count; i++){
+            updated_tokens[pos++] = tokens[i];
+        }
+
+        return parse_expression(updated_tokens, new_count);
+
+        free(updated_tokens[idx].text);
     }
 
     // Обработка математических операций с учётом приоритетов
@@ -202,10 +223,10 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             int left_count = 0, right_count = 0;
 
             // Разделяем выражение на левую и правую части от оператора
-            for (int j = 0; j < i; j++) {
+            for (int j = i-1; j >= 0 && tokens[j].type != TOKEN_math_operator; j--) {
                 left_part[left_count++] = tokens[j];
             }
-            for (int j = i + 1; j < tokens_count; j++) {
+            for (int j = i + 1; j < tokens_count && tokens[j].type != TOKEN_math_operator; j++) {
                 right_part[right_count++] = tokens[j];
             }
 
@@ -222,8 +243,8 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             }
 
             // Проверяем, что оба операнда - числа или переменные
-            int left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
-            int right_num;
+            double left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
+            double right_num;
 
             if(left_result -> type != TOKEN_number){
                 if(left_result -> type != TOKEN_variable){
@@ -251,7 +272,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             }
 
             //если токен - число, то берем его значение
-            left_num = atoi(left_result -> text);
+            left_num = atof(left_result -> text);
 
             if(right_result -> type != TOKEN_number){
                 if(right_result -> type != TOKEN_variable){
@@ -279,7 +300,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             }
 
             //если токен - число, то берем его значение
-            right_num = atoi(right_result -> text);
+            right_num = atof(right_result -> text);
 
             // Выполняем операцию
             double result;
@@ -321,13 +342,42 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                 return NULL;
             }
             strcpy(result_token->text, buffer);
+
+            //обновленный массив токенов, содержащий только результат умножения/деления
+            TOKEN updated_tokens[100];
+            int new_count = tokens_count - (left_count + right_count + 1) + 1;
+
+            // Копируем часть до левого операнда
+            int pos = 0;
+            for (int j = 0; j < i - left_count; j++) {
+                updated_tokens[pos++] = tokens[j];
+            }
+
+            updated_tokens[pos].type = TOKEN_number;
+            updated_tokens[pos].text = malloc(strlen(result_token->text) + 1);
+            if(!updated_tokens[pos].text) {
+                printf("ERROR: Memory error\n");
+                return NULL;
+            }
+
+            int idx = pos;
+            strcpy(updated_tokens[pos++].text, result_token->text);
+
+            // Копируем часть после правого операнда
+            for (int j = i + right_count + 1; j < tokens_count; j++) {
+                updated_tokens[pos++] = tokens[j];
+            }
+
+            free_token(result_token);
             
-            return result_token;
+            return parse_expression(updated_tokens, new_count);
+
+            free(updated_tokens[idx].text);
         }
     }
 
     // Затем сложение и вычитание
-    for (int i = 0; i < tokens_count; i++) {
+    for (int i = tokens_count - 1; i >= 0; i--) {
         if (tokens[i].type == TOKEN_math_operator && (strcmp(tokens[i].text, "+") == 0 || strcmp(tokens[i].text, "-") == 0)) {
             TOKEN left_part[100], right_part[100];
             int left_count = 0, right_count = 0;
@@ -351,8 +401,8 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             }
 
             // Проверяем, что оба операнда - числа или переменные
-            int left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
-            int right_num;
+            double left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
+            double right_num;
 
             if(left_result -> type != TOKEN_number){
                 if(left_result -> type != TOKEN_variable){
@@ -377,10 +427,10 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                         }
                     }
                 }
+            } else {
+                //если токен - число, то берем его значение
+                left_num = atof(left_result -> text);   
             }
-
-            //если токен - число, то берем его значение
-            left_num = atoi(left_result -> text);
 
             if(right_result -> type != TOKEN_number){
                 if(right_result -> type != TOKEN_variable){
@@ -405,16 +455,18 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                         }
                     }
                 }
+            } else {
+                //если токен - число, то берем его значение
+                right_num = atof(right_result -> text);
             }
 
-            //если токен - число, то берем его значение
-            right_num = atoi(right_result -> text);
+            printf("%lf %lf", left_num, right_num);
 
-            int result;
+            double result;
             
             if (strcmp(tokens[i].text, "+") == 0) {
                 result = left_num + right_num;
-            } else {
+            } else { 
                 result = left_num - right_num;
             }
 
@@ -431,7 +483,7 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
             
             result_token->type = TOKEN_number;
             char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%d", result);
+            snprintf(buffer, sizeof(buffer), "%.2f", result);
             result_token->text = malloc(strlen(buffer) + 1);
             if (!result_token->text) {
                 free(result_token);
