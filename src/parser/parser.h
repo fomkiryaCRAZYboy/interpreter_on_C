@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include "../lexer/lexer.h"
+
+#define MAX_VARIABLES_COUNT 100 //можно объявить до ста переменных в коде
 #define MAX_AST_COUNT   250 // до 250 узлов может быть в программе
 
 //определяю тип возвращаемого значения для основной функции парсинга
@@ -16,22 +18,35 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count); //основная ф�
 
  
 typedef struct{
-    TOKEN node; //узел, связывающий два лепестка (может быть '=' или любая мат. операция)
+    TOKEN node; //узел, связывающий два лепестка 
     TOKEN right; //правый лепесток
     TOKEN left;  //левый лепесток
+    TOKEN* print_arguments; //список аргументов-токенов для функции принт (если она есть) 
+    int count_print_args; 
 } AST;
 
-AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left);
+AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left, const TOKEN* print_arguments, const int args_count);
 
 TOKEN* parse_expression(TOKEN tokens[], int tokens_count);
 
 
+//в структуре VARIABLE объединение DATA_TYPE для разных типов данных
+typedef union {
+    int int_value;
+    double double_value;
+} DATA_TYPE;
 
+//в структуре VARIABLE будет храниться один из типов данных, к которому принадлежит переменная
+typedef enum {
+    INT_TYPE, 
+    DOUBLE_TYPE,
+} USING_TYPE;
 
 //структура переменной
 typedef struct {
     char* name; //название переменной
-    int value; //значение переменной (пока только целочисленные)
+    DATA_TYPE value; //значение переменной
+    USING_TYPE type; //тип переменной
 } VARIABLE;
 
 
@@ -41,10 +56,17 @@ typedef enum {
 } VAR_ADD_STATUS;
 
 //создание переменной
-VAR_ADD_STATUS add_variable(const char* name, const int value); 
+VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, const USING_TYPE type); 
 
 
 //проверка наличия переменной
 bool check_variable_exists(const char* name);
+
+
+//проверка на количество переданных аргументов для print(). возвращает кол-во запятых между аргументами (разделители)
+int comma_count(TOKEN arguments[], int tokens_count);
+
+//добавление запаршенного токена-аргумента в результирующий массив аргументов функции 'print'
+int add_argument(TOKEN* arguments_array, TOKEN* argument, int index); //index - индекс нового аргумента в массиве
 
 #endif

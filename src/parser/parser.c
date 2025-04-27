@@ -3,10 +3,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_VARIABLES_COUNT 100 //можно объявить до ста переменных в коде
-
 AST AST_array[MAX_AST_COUNT];
 int ast_count = 0;
+
+int add_argument(TOKEN* arguments_array, TOKEN* argument, int index){
+    if (!arguments_array || !argument || !argument->text) {
+        printf("ERROR: Invalid arguments\n");
+        return 0;
+    }
+
+    arguments_array[index].type = argument->type;
+    arguments_array[index].text = malloc(strlen(argument -> text) + 1);
+    if(!arguments_array[index].text){
+        printf("ERROR: Memory error");
+        return 0;
+    }
+    strcpy(arguments_array[index].text, argument -> text);
+
+    return 1;
+}
+
+
+int comma_count(TOKEN arguments[], int tokens_count){
+    int comma_count = 0;
+    for(int i = 0; i < tokens_count; i++){
+        if(arguments[i].type == TOKEN_comma)comma_count++;
+    }
+
+    return comma_count;
+}
 
 
 VARIABLE variables_array[MAX_VARIABLES_COUNT] = {0}; //массив переменных, будет заполняться во время создания переменных
@@ -23,7 +48,7 @@ bool check_variable_exists(const char* name){
     return exists;
 }
 
-VAR_ADD_STATUS add_variable(const char* name, const int value){
+VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, const USING_TYPE type){
     if(variables_count >= MAX_VARIABLES_COUNT){
         printf("ERROR: Too many variables declared\n");
         return Failed_add_var;
@@ -36,19 +61,27 @@ VAR_ADD_STATUS add_variable(const char* name, const int value){
         printf("ERROR: Memory error");
         return Failed_add_var;
     }
-    strcpy(var.name, name);
+    strncpy(var.name, name, strlen(name) + 1);
 
-    var.value = value;
+    var.type = type;
+
+    // Копируем только нужное поле объединения
+    if (type == INT_TYPE) {
+        var.value.int_value = value.int_value;
+    } else {
+        var.value.double_value = value.double_value;
+    }
 
     //сразу добавляем переменную в массив и увеличиваем variables_count
     variables_array[variables_count++] = var;
+
     return Successful_add_var;
 }
 
 
 
-AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left){
-    if (!node || !right || !left) {
+AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left, const TOKEN* print_arguments, const int args_count){
+    if (!node || !right || !left || !print_arguments) {
         printf("ERROR: Null token passed to create_AST\n");
         return NULL;
     }
@@ -96,412 +129,35 @@ AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left){
         strcpy(new_ast -> left.text, left->text);
     }
 
-    return new_ast;
-}
-
-/*
-Функция вычисляет сложные выражения, упрощает их, и возвращает токен. 
-Например, имеем строку кода: x = 3 * (5 + y);
-В функцию передаются токены rvalue (3 * (5 + y))
-Фунция вернёт токен числа 21 (при условии, что y = 2),
-*/
-TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
-    if (tokens == NULL || tokens_count == 0) {
-        printf("ERROR: Empty tokens array\n");
+    new_ast ->print_arguments = malloc(args_count * sizeof(TOKEN));
+    if(!new_ast->print_arguments){
+        free(new_ast -> left.text);
+        free(new_ast -> right.text);
+        free(new_ast -> node.text);
+        free(new_ast);
+        printf("ERROR: Memory error\n");
         return NULL;
     }
-
-    if (tokens_count == 1) {
-        // Базовый случай: если токен один, возвращаем его 
-        if(tokens[0].type == TOKEN_variable){
-            if(!check_variable_exists(tokens[0].text)){
-                printf("ERROR: variable '%s' not declared\n", tokens[0].text);
-                return NULL;
+    for(int i = 0; i < args_count; i++){
+        new_ast -> print_arguments[i].text = malloc(strlen(print_arguments[i].text) + 1);
+        if(!new_ast -> print_arguments[i].text) {
+            for(int j = 0; j < i; j++){
+                free(new_ast -> print_arguments[j].text);
             }
-
-            int val;
-            bool found = false;
-            for(int i = 0; i < variables_count;i++) {
-                if(strcmp(variables_array[i].name, tokens[0].text) == 0){
-                    val = variables_array[i].value;
-                    found = true;
-                    break;
-                }
-            }
-
-            if(!found){
-                printf("ERROR: Variable '%s' not found\n", tokens[0].text);
-                return NULL;
-            }
-            
-            char text_val[] = {0};
-            snprintf(text_val, 31, "%d", val);
-
-            TOKEN* token = create_token(TOKEN_number, text_val);
-            return token;
-        }
-
-        if(tokens[0].type == TOKEN_number){
-            size_t text_len = strlen(tokens[0].text);
-
-            char buff[31];
-            strcpy(buff, tokens[0].text);
-
-            TOKEN* token_num = create_token(TOKEN_number, buff); 
-            if(!token_num){
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-            return token_num;
-        }
-    }
-
-    // Проверка скобок
-    int open_parantases_count = 0;
-    int close_parantases_count = 0;
-
-    for (int i = 0; i < tokens_count; i++) {
-        if (tokens[i].type == TOKEN_open_paren) open_parantases_count++;
-        if (tokens[i].type == TOKEN_close_paren) close_parantases_count++;
-    }
-
-    if (open_parantases_count != close_parantases_count) {
-        printf("ERROR: All parentheses must be closed\n");
-        return NULL;
-    }
-
-    // Обработка скобок
-    if (open_parantases_count) {
-        TOKEN subtokens[100];
-        int open_par_idx = 0;
-        while (tokens[open_par_idx].type != TOKEN_open_paren) open_par_idx++;
-
-        int close_par_idx = tokens_count - 1;
-        while (tokens[close_par_idx].type != TOKEN_close_paren) close_par_idx--;
-
-        int count = 0;
-        while (count < 100 && open_par_idx+1 <= close_par_idx-1) {
-            subtokens[count++] = tokens[open_par_idx++];
-        }
-
-        // сперва парсим то, что в скобках
-        TOKEN* paren_expression =  parse_expression(subtokens, count);
-
-        TOKEN updated_tokens[100];
-        int new_count = tokens_count - (count + 2);
-
-        int pos = 0;
-        for(int i = 0; i < open_par_idx; i++){
-            updated_tokens[pos++] = tokens[i];
-        }
-
-        updated_tokens[pos].type = paren_expression->type;
-
-        updated_tokens[pos].text = malloc(strlen(paren_expression->text) + 1);
-        if(!updated_tokens[pos].text) {
+            free(new_ast -> left.text);
+            free(new_ast -> right.text);
+            free(new_ast -> node.text);
+            free(new_ast);
             printf("ERROR: Memory error\n");
             return NULL;
         }
-        strcpy(updated_tokens[pos].text, paren_expression -> text);
-        int idx = pos;
-        pos++;
-
-        for(int i = close_par_idx + 1; i < tokens_count; i++){
-            updated_tokens[pos++] = tokens[i];
-        }
-
-        return parse_expression(updated_tokens, new_count);
-
-        free(updated_tokens[idx].text);
+        strcpy(new_ast -> print_arguments[i].text, print_arguments[i].text);
     }
 
-    // Обработка математических операций с учётом приоритетов
-    // Сначала умножение и деление
-    for (int i = 0; i < tokens_count; i++) {
-        if (tokens[i].type == TOKEN_math_operator && (strcmp(tokens[i].text, "*") == 0 || strcmp(tokens[i].text, "/") == 0)) {
-            TOKEN left_part[100], right_part[100];
-            int left_count = 0, right_count = 0;
+    new_ast -> count_print_args = args_count;
 
-            // Разделяем выражение на левую и правую части от оператора
-            for (int j = i-1; j >= 0 && tokens[j].type != TOKEN_math_operator; j--) {
-                left_part[left_count++] = tokens[j];
-            }
-            for (int j = i + 1; j < tokens_count && tokens[j].type != TOKEN_math_operator; j++) {
-                right_part[right_count++] = tokens[j];
-            }
-
-            // Рекурсивно вычисляем левую и правую части
-            TOKEN* left_result = parse_expression(left_part, left_count);
-            TOKEN* right_result = parse_expression(right_part, right_count);
-            
-            if (!left_result || !right_result) {
-                if (left_result) free(left_result->text);
-                if (right_result) free(right_result->text);
-                free(left_result);
-                free(right_result);
-                return NULL;
-            }
-
-            // Проверяем, что оба операнда - числа или переменные
-            double left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
-            double right_num;
-
-            if(left_result -> type != TOKEN_number){
-                if(left_result -> type != TOKEN_variable){
-                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                    free(left_result->text);
-                    free(right_result->text);
-                    free(left_result);
-                    free(right_result);
-                    return NULL;
-                }
-                else {
-                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
-                    if(!(check_variable_exists(left_result -> text))){
-                        printf("ERROR: Variable '%s' not declared", left_result -> text);
-                        return NULL;
-                    }
-
-                    //записываем численное значение переменной в left_num
-                    for(int i = 0; i < variables_count;i ++){
-                        if(variables_array[i].name == left_result -> text){
-                            left_num = variables_array[i].value;
-                        }
-                    }
-                }
-            }
-
-            //если токен - число, то берем его значение
-            left_num = atof(left_result -> text);
-
-            if(right_result -> type != TOKEN_number){
-                if(right_result -> type != TOKEN_variable){
-                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                    free(left_result->text);
-                    free(right_result->text);
-                    free(left_result);
-                    free(right_result);
-                    return NULL;
-                }
-                else {
-                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
-                    if(!(check_variable_exists(right_result -> text))){
-                        printf("ERROR: Variable '%s' not declared", right_result -> text);
-                        return NULL;
-                    }
-
-                    //записываем численное значение переменной в left_num
-                    for(int i = 0; i < variables_count;i ++){
-                        if(variables_array[i].name == right_result -> text){
-                            right_num = variables_array[i].value;
-                        }
-                    }
-                }
-            }
-
-            //если токен - число, то берем его значение
-            right_num = atof(right_result -> text);
-
-            // Выполняем операцию
-            double result;
-            
-            if (strcmp(tokens[i].text, "*") == 0) {
-                result = left_num * right_num;
-            } else {
-                if (right_num == 0) {
-                    printf("ERROR: Division by zero\n");
-                    free(left_result->text);
-                    free(right_result->text);
-                    free(left_result);
-                    free(right_result);
-                    return NULL;
-                }
-                result = left_num / (double)right_num;
-            }
-
-            // Освобождаем память
-            free(left_result->text);
-            free(right_result->text);
-            free(left_result);
-            free(right_result);
-
-            // Создаём результирующий токен
-            TOKEN* result_token = malloc(sizeof(TOKEN));
-            if (!result_token) {
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-            
-            result_token->type = TOKEN_number;
-            char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%.2f", result);
-            result_token->text = malloc(strlen(buffer) + 1);
-            if (!result_token->text) {
-                free(result_token);
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-            strcpy(result_token->text, buffer);
-
-            //обновленный массив токенов, содержащий только результат умножения/деления
-            TOKEN updated_tokens[100];
-            int new_count = tokens_count - (left_count + right_count + 1) + 1;
-
-            // Копируем часть до левого операнда
-            int pos = 0;
-            for (int j = 0; j < i - left_count; j++) {
-                updated_tokens[pos++] = tokens[j];
-            }
-
-            updated_tokens[pos].type = TOKEN_number;
-            updated_tokens[pos].text = malloc(strlen(result_token->text) + 1);
-            if(!updated_tokens[pos].text) {
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-
-            int idx = pos;
-            strcpy(updated_tokens[pos++].text, result_token->text);
-
-            // Копируем часть после правого операнда
-            for (int j = i + right_count + 1; j < tokens_count; j++) {
-                updated_tokens[pos++] = tokens[j];
-            }
-
-            free_token(result_token);
-            
-            return parse_expression(updated_tokens, new_count);
-
-            free(updated_tokens[idx].text);
-        }
-    }
-
-    // Затем сложение и вычитание
-    for (int i = tokens_count - 1; i >= 0; i--) {
-        if (tokens[i].type == TOKEN_math_operator && (strcmp(tokens[i].text, "+") == 0 || strcmp(tokens[i].text, "-") == 0)) {
-            TOKEN left_part[100], right_part[100];
-            int left_count = 0, right_count = 0;
-
-            for (int j = 0; j < i; j++) {
-                left_part[left_count++] = tokens[j];
-            }
-            for (int j = i + 1; j < tokens_count; j++) {
-                right_part[right_count++] = tokens[j];
-            }
-
-            TOKEN* left_result = parse_expression(left_part, left_count);
-            TOKEN* right_result = parse_expression(right_part, right_count);
-            
-            if (!left_result || !right_result) {
-                if (left_result) free(left_result->text);
-                if (right_result) free(right_result->text);
-                free(left_result);
-                free(right_result);
-                return NULL;
-            }
-
-            // Проверяем, что оба операнда - числа или переменные
-            double left_num;  //переменная для хранения численного значения токена с целью дальнейшего вычисления
-            double right_num;
-
-            if(left_result -> type != TOKEN_number){
-                if(left_result -> type != TOKEN_variable){
-                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                    free(left_result->text);
-                    free(right_result->text);
-                    free(left_result);
-                    free(right_result);
-                    return NULL;
-                }
-                else {
-                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
-                    if(!(check_variable_exists(left_result -> text))){
-                        printf("ERROR: Variable '%s' not declared", left_result -> text);
-                        return NULL;
-                    }
-
-                    //записываем численное значение переменной в left_num
-                    for(int i = 0; i < variables_count;i ++){
-                        if(variables_array[i].name == left_result -> text){
-                            left_num = variables_array[i].value;
-                        }
-                    }
-                }
-            } else {
-                //если токен - число, то берем его значение
-                left_num = atof(left_result -> text);   
-            }
-
-            if(right_result -> type != TOKEN_number){
-                if(right_result -> type != TOKEN_variable){
-                    printf("ERROR: Can only perform arithmetic operations on numbers\n");
-                    free(left_result->text);
-                    free(right_result->text);
-                    free(left_result);
-                    free(right_result);
-                    return NULL;
-                }
-                else {
-                    //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
-                    if(!(check_variable_exists(right_result -> text))){
-                        printf("ERROR: Variable '%s' not declared", right_result -> text);
-                        return NULL;
-                    }
-
-                    //записываем численное значение переменной в left_num
-                    for(int i = 0; i < variables_count;i ++){
-                        if(variables_array[i].name == right_result -> text){
-                            right_num = variables_array[i].value;
-                        }
-                    }
-                }
-            } else {
-                //если токен - число, то берем его значение
-                right_num = atof(right_result -> text);
-            }
-
-            printf("%lf %lf", left_num, right_num);
-
-            double result;
-            
-            if (strcmp(tokens[i].text, "+") == 0) {
-                result = left_num + right_num;
-            } else { 
-                result = left_num - right_num;
-            }
-
-            free(left_result->text);
-            free(right_result->text);
-            free(left_result);
-            free(right_result);
-
-            TOKEN* result_token = malloc(sizeof(TOKEN));
-            if (!result_token) {
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-            
-            result_token->type = TOKEN_number;
-            char buffer[50];
-            snprintf(buffer, sizeof(buffer), "%.2f", result);
-            result_token->text = malloc(strlen(buffer) + 1);
-            if (!result_token->text) {
-                free(result_token);
-                printf("ERROR: Memory error\n");
-                return NULL;
-            }
-            strcpy(result_token->text, buffer);
-            
-            return result_token;
-        }
-    }
-
-    // Если дошли сюда, значит выражение не распознано
-    printf("ERROR: Invalid expression\n");
-    return NULL;
+    return new_ast;
 }
-
-
 
 PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
 {
@@ -515,7 +171,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
     int k = 0; //индекс для перебора токенов всего кода
     int line_number = 1;
     for(int i = 0; i < semicolon_count; i++){
-        TOKEN line[100];
+        TOKEN line[200];
         int j = 0;
         while(stream[k].type != TOKEN_semicolon && k < tokens_count){  //формируем массив токенов одной строки для дальнейшего парсинга
             if(stream[k].type == TOKEN_space) { //сразу пропускаем незнаяещие пробелы
@@ -534,11 +190,107 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             /*
                 code (должна быть отдельная обработка списка аргументов к 'print' и создание выражения)
             */
+
+            if(line[1].type != TOKEN_open_paren){
+                printf("ERROR in %d line: The 'print' function requires a list of arguments in parentheses\n", line_number);
+                return Failed_Parsing;
+            }
+
+            if(line[2].type == TOKEN_close_paren){
+                printf("ERROR in %d line: Missed a list of arguments in 'print' function\n", line_number);
+                return Failed_Parsing;
+            }
+
+            //аргументы к функции print могут передаваться через запятую и их необходимо парсить
+            int args_count = 0;
+            int last_paren_idx = tokens_count_in_line - 2;
+            for(int i = 2; i < last_paren_idx; i++){
+                args_count++;
+            }
+            TOKEN arguments[args_count];
+            for(int i = 0; i < args_count; i++){
+                arguments[i] = line[i+2];
+            }
+            
+            //итоговый массив токенов-аргументов, прошедших парсинг
+            TOKEN* res_args = malloc((comma_count(arguments, args_count) + 1) * sizeof(TOKEN));
+            if(!res_args) {
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            }
+
+
+            //пропускаем аргументы через функцию парсинга выражений и добавляем к массиву res_args
+            int res_args_count = 0;
+            for(int i = 0; i < args_count; i++){
+                TOKEN argument[100];
+                int tokens_in_arg = 0;
+                while(argument[i].type != TOKEN_comma){
+                    argument[tokens_in_arg++] = arguments[i];
+                }
+
+                TOKEN* res_arg = parse_expression(argument, tokens_in_arg);
+                if(!res_arg){
+                    printf("ERROR in %d line: Failed to parse 'print' func arguments\n", line_number);
+                    return Failed_Parsing;
+                }
+
+                //добавляем результирующий токен в массив res_args
+                if(add_argument(res_args, res_arg, i) != 1){
+                    printf("ERROR in %d line: Failed to add argument number %d", line_number, i);
+                }
+
+                res_args_count++;
+                free_token(res_arg);
+            }
+
+            TOKEN* print_token = create_token(TOKEN_print, "print");
+            if(!print_token) {
+                free(res_args);
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            } 
+
+            TOKEN* stub = create_token(TOKEN_space, " ");
+            if(!stub) {
+                free_token(print_token);
+                free(res_args);
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            } 
+
+            TOKEN* stub2 = create_token(TOKEN_space, " ");
+            if(!stub2) {
+                free_token(stub);
+                free_token(print_token);
+                free(res_args);
+                printf("ERROR: Memory error\n");
+                return Failed_Parsing;
+            } 
+
+            AST* print_ast = create_AST(print_token, stub, stub2, res_args, res_args_count);
+            if(ast_count >= MAX_AST_COUNT){
+                printf("ERROR in %d line: Too many AST nodes", line_number);
+                free_token(print_token);
+                free_token(stub);
+                free_token(stub2);
+                free(res_args);
+                return Failed_Parsing;
+            }
+
+            AST_array[ast_count++] = *print_ast;
+            //освобождаем память от уже скопированного массива
+            free(res_args);
+            free_token(print_token);
+            free_token(stub);
+            free_token(stub2);
+
+            line_number++;
         }
 
         else if(line[0].type == TOKEN_end){  //если строка содержит 'end' (то есть последняя строка)
             if(line[1].type != TOKEN_semicolon){  //если после 'end' нет точки с запятой - ошибка
-                printf("ERROR: Missed symbol ';' after 'end' keyword in line %d\n", line_number);
+                printf("ERROR in %d line: Missed symbol ';' after 'end' keyword\n", line_number);
                 return Failed_Parsing;
             }
             /*
@@ -565,7 +317,9 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 return Failed_Parsing;
             }
 
-            AST* end_ast = create_AST(end_token, stub, stub2);
+            TOKEN stub3[] = {0};
+
+            AST* end_ast = create_AST(end_token, stub, stub2, stub3, 0);
 
             if(ast_count >= MAX_AST_COUNT){
                 printf("ERROR in %d line: Too many AST nodes", line_number);
@@ -639,8 +393,10 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 strcpy(assign_token->text, "=");
                 assign_token->type = TOKEN_assign;
 
+                TOKEN stub[] = {0};
+
                 /*необходимо сформировать AST с корнем в виде токена '=' и лепестками в виде lvalue и rvalue*/
-                AST* ast = create_AST(assign_token, right_token, &line[0]);
+                AST* ast = create_AST(assign_token, right_token, &line[0], stub, 0);
                 if(ast == NULL){
                     printf("ERROR in %d line: Failed to create AST", line_number);
                     return Failed_Parsing;
