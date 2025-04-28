@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "../executor/executor.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -207,13 +208,16 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             for(int i = 2; i < last_paren_idx; i++){
                 args_count++;
             }
+
+            //массив токенов всего выражения в скобках (включая запятые)
             TOKEN arguments[args_count];
             for(int i = 0; i < args_count; i++){
                 arguments[i] = line[i+2];
             }
-            
+
             //итоговый массив токенов-аргументов, прошедших парсинг
-            TOKEN* res_args = malloc((comma_count(arguments, args_count) + 1) * sizeof(TOKEN));
+            int count_of_comma = comma_count(arguments, args_count);
+            TOKEN* res_args = malloc((count_of_comma + 1) * sizeof(TOKEN));
             if(!res_args) {
                 printf("ERROR: Memory error\n");
                 return Failed_Parsing;
@@ -222,14 +226,18 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
 
             //пропускаем аргументы через функцию парсинга выражений и добавляем к массиву res_args
             int res_args_count = 0;
-            for(int i = 0; i < args_count; i++){
+            int tokens_in_arg = 0;
+
+            for(int i = 0; i <= count_of_comma; i++){
                 TOKEN argument[100];
-                int tokens_in_arg = 0;
-                while(argument[i].type != TOKEN_comma){
-                    argument[tokens_in_arg++] = arguments[i];
+                int count = 0;
+                while(arguments[tokens_in_arg].type != TOKEN_comma && tokens_in_arg < args_count){
+                    argument[count] = arguments[tokens_in_arg];
+                    tokens_in_arg++;
+                    count++;
                 }
 
-                TOKEN* res_arg = parse_expression(argument, tokens_in_arg);
+                TOKEN* res_arg = parse_expression(argument, count);
                 if(!res_arg){
                     printf("ERROR in %d line: Failed to parse 'print' func arguments\n", line_number);
                     return Failed_Parsing;
@@ -238,13 +246,29 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 //добавляем результирующий токен в массив res_args
                 if(add_argument(res_args, res_arg, i) != 1){
                     printf("ERROR in %d line: Failed to add argument number %d", line_number, i);
+                    return Failed_Parsing;
                 }
 
                 res_args_count++;
+                tokens_in_arg++;
                 free_token(res_arg);
             }
+            
+            /*puts("");
+            printf("++%d++", res_args_count);*/
 
-            TOKEN* print_token = create_token(TOKEN_print, "print");
+            /*for(int i = 0; i < res_args_count; i++){
+                printf("%s ", res_args[i].text);
+            }*/
+
+            if(execute_print(res_args, res_args_count) != Success_Executing){
+                printf("ERROR in %d line: Execution error\n", line_number);
+                free(res_args);
+                return Failed_Parsing;
+            }
+            free(res_args);
+
+            /*TOKEN* print_token = create_token(TOKEN_print, "print");
             if(!print_token) {
                 free(res_args);
                 printf("ERROR: Memory error\n");
@@ -283,7 +307,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             free(res_args);
             free_token(print_token);
             free_token(stub);
-            free_token(stub2);
+            free_token(stub2);*/
 
             line_number++;
         }
@@ -293,49 +317,8 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 printf("ERROR in %d line: Missed symbol ';' after 'end' keyword\n", line_number);
                 return Failed_Parsing;
             }
-            /*
-            добавляем в массив AST 'end' и завершаем цикл (все что находится псле end обработано не будет)
-            */
 
-            //в качестве узла выступает токен 'end', правый и левый лепестки - незначащие пробелы (заглушки)
-            TOKEN* end_token = create_token(TOKEN_end, "end");
-            if(!end_token){
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            }
-            TOKEN* stub = create_token(TOKEN_space, " ");
-            if(!stub){
-                free_token(end_token);
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            }
-            TOKEN* stub2 = create_token(TOKEN_space, " ");
-            if(!stub2){
-                free_token(end_token);
-                free_token(stub);
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            }
-
-            TOKEN stub3[] = {0};
-
-            AST* end_ast = create_AST(end_token, stub, stub2, stub3, 0);
-
-            if(ast_count >= MAX_AST_COUNT){
-                printf("ERROR in %d line: Too many AST nodes", line_number);
-                free_token(end_token);
-                free_token(stub);
-                free_token(stub2);
-                return Failed_Parsing;
-            }
-
-            AST_array[ast_count++] = *end_ast;
-            free_token(end_token);
-            free_token(stub);
-            free_token(stub2);
-
-            line_number++;
-
+            //после 'end' останавливаем цикл, все что находится после не подлежит парсингу. Конец программы
             break;
         }
 
@@ -383,42 +366,13 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                     return Failed_Parsing;
                 }
 
-                char buffer[] = "=";
-                TOKEN* assign_token = create_token(TOKEN_assign, buffer);
-                if(!assign_token){
-                    printf("ERROR: Memory error\n");
+                if(execute_assign(&line[0], right_token) != Success_Executing){
+                    printf("ERROR in %d line: Execution error\n", line_number);
+                    free_token(right_token);
                     return Failed_Parsing;
-                }
+                } 
 
-                strcpy(assign_token->text, "=");
-                assign_token->type = TOKEN_assign;
-
-                TOKEN stub[] = {0};
-
-                /*необходимо сформировать AST с корнем в виде токена '=' и лепестками в виде lvalue и rvalue*/
-                AST* ast = create_AST(assign_token, right_token, &line[0], stub, 0);
-                if(ast == NULL){
-                    printf("ERROR in %d line: Failed to create AST", line_number);
-                    return Failed_Parsing;
-                }
-
-
-                //ПОСЛЕ ТОГО, КАК СФОРМИРОВАЛИ AST для этой строки:
-                //добавляем AST в массив 
-                
-                if(ast_count >= MAX_AST_COUNT){
-                    printf("ERROR in %d line: Too many AST nodes", line_number);
-                    free(right_token->text);
-                    free(right_token);
-                    free(ast);
-                    return Failed_Parsing;
-                }
-
-                AST_array[ast_count++] = *ast;  //копируем данные
-
-                free(right_token->text);
-                free(right_token);
-                free(ast);
+                free_token(right_token);
 
                 line_number++;
             }
