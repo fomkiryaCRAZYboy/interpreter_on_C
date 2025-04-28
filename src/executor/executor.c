@@ -9,51 +9,6 @@
 extern VARIABLE variables_array[MAX_VARIABLES_COUNT];
 extern int variables_count;
 
-/*
-EXECUTING_STATUS executing(AST ast_array[], int ast_count){
-    for(int i = 0 ; i < ast_count; i++){
-        //если узел AST - это знак присваивания, значит слева от него - переменная, а справа - значение, которое необходимо переменной присвоить
-        if(ast_array[i].node.type == TOKEN_assign){
-            //проверяем тип rvalue токена (чтобы понять какой именно задать тип для переменной)
-            char* ptr_float = strchr(ast_array[i].right.text, '.'); //ищем плавающую точку в числе
-            //проверяем, существует ли на данный момент переменная
-            if(check_variable_exists(ast_array[i].left.text)){
-                //если существует
-                //ищем индекс переменной в массиве переменных
-                int var_idx_in_array = 0;
-                while(strcmp(variables_array[var_idx_in_array].name, ast_array[i].left.text) != 0) var_idx_in_array++;
-
-                if(ptr_float){
-                    //меняем тип переменной и присваиваем её новое значение
-                    variables_array[var_idx_in_array].type = DOUBLE_TYPE;
-                    variables_array[var_idx_in_array].value.double_value = aotf(ast_array[i].right.text);
-                } else{
-                    variables_array[var_idx_in_array].type = INT_TYPE;
-                    variables_array[var_idx_in_array].value.int_value = aoti(ast_array[i].right.text);
-                }
-            } else {
-                //если переменной нет в массиве - её необходимо создать
-                DATA_TYPE value;
-                USING_TYPE type;
-                if(ptr_float){
-                    value.double_value = aotf(ast_array[i].right.text);
-                    type = DOUBLE_TYPE;
-                } else{
-                    value.int_value = aoti(ast_array[i].right.text);
-                    type = INT_TYPE;
-                }
-                if(create_and_add_variable(ast_array[i].left.text, value, type) != Successful_add_var) {
-                    printf("ERROR in %d line: Failed to create or add variable\n", i+1);
-                    return Failed_Executing;
-                }
-            }
-        }
-    }
-
-    return Success_Executing;
-}
-*/
-
 //left - переменная(слева от '='), right - число или переменная (справа от '=')
 EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
     //проверяем, существует ли переменная на данный момент
