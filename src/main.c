@@ -17,10 +17,10 @@ extern int variables_count;
 
 int main(void)
 {
-    char input[MAX_INPUT_SIZE];
+    /*char input[MAX_INPUT_SIZE];
     char program[MAX_PROGRAM_SIZE] = {0};
     printf("Welcome to interpreter! Type 'end;' to finish input.\n");
-    
+
     while(1) {
         printf("> ");
         
@@ -43,22 +43,24 @@ int main(void)
             printf("Program too large!\n");
             return 1;
         }
-    }
+    }*/
     
     // Токенизация и выполнение всей программы
-    if(tokenize(program) != Successful_Tokenization) {
+    if(tokenize("\"hello344@#@$)_+9/.y\"") != Successful_Tokenization) {
         printf("Tokenization error\n");
         return 1;
     }
+
+    debug_print_stream();
     
-    printf("Output:\n");
+    /*printf("Output:\n");
     puts("---------------------------------------------");
     
     if(parsing(stream, tokens_count) != Successful_Parsing) {
         printf("Parsing Failed\n");
         return 1;
     }
-    puts("\n---------------------------------------------");
+    puts("\n---------------------------------------------");*/
 
     free_stream();
 

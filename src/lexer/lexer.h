@@ -2,6 +2,7 @@
 #define LEXER_H
 
 #define MAX_VARIABLE_LEN 25 //максимальная длина символов для переменной
+#define MAX_STRING_LEN  30 //МАКСИМАЛЬНАЯ длина строки
 
 //данное перечисление будет использоваться в качестве типа возвращаемого значения токенизации
 typedef enum {
@@ -17,6 +18,8 @@ typedef enum {
 
 //перечисление типов токенов 
 typedef enum {
+    TOKEN_string, //строка: "hello". с двойными кавычками
+    TOKEN_dot, //точка (.)
     TOKEN_variable,  //переменная
     TOKEN_number,   //число
     TOKEN_math_operator, //математический оператор ( +, -, *, /)

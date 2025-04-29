@@ -15,6 +15,8 @@ const char* get_type_of_token(TOKEN_TYPE type) {
         case TOKEN_comma:           return "COMMA";
         case TOKEN_space:           return "SPACE";
         case TOKEN_print:           return "PRINT";
+        case TOKEN_dot:             return "DOT";
+        case TOKEN_string:          return "STR";
 
         default:                    return "UNKNOWN_TYPE";
     }
