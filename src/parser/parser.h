@@ -34,12 +34,14 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count);
 typedef union {
     int int_value;
     double double_value;
+    char string_value[MAX_STRING_LEN];
 } DATA_TYPE;
 
 //в структуре VARIABLE будет храниться один из типов данных, к которому принадлежит переменная
 typedef enum {
     INT_TYPE, 
     DOUBLE_TYPE,
+    STRING_TYPE,
 } USING_TYPE;
 
 //структура переменной
@@ -61,6 +63,8 @@ VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, 
 
 //проверка наличия переменной
 bool check_variable_exists(const char* name);
+
+int get_variable_index(const char* name);
 
 
 //проверка на количество переданных аргументов для print(). возвращает кол-во запятых между аргументами (разделители)

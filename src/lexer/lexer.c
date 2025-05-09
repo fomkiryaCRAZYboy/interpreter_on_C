@@ -82,7 +82,7 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 string[i] = *str++;
             }
             if(*str != '\"'){
-                printf("ERROR: Max string length = 30\n");
+                printf("ERROR: Max string length = 60\n");
                 return Failed_Tokenization;
             }
 
@@ -120,24 +120,27 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
             if(strcmp(varaible, "end") == 0){
                 TOKEN* end_token = create_token(TOKEN_end, "end");
                 if(add_token(end_token) != Successful_Add) {
+                    free_token(end_token);
                     printf("ERROR: Failed to add token(end)\n");
                     return Failed_Tokenization;
                 }
-                free(end_token);
+                free_token(end_token);
             }
 
             else if(strcmp(varaible, "print") == 0){
                 TOKEN* print_token = create_token(TOKEN_print, "print");
                 if(add_token(print_token) != Successful_Add) {
+                    free_token(print_token);
                     printf("ERROR: Failed to add token(print)\n");
                     return Failed_Tokenization;
                 }
-                free(print_token);
+                free_token(print_token);
             }
 
             else{
             TOKEN* var_token = create_token(TOKEN_variable, varaible);
             if(add_token(var_token) != Successful_Add) {
+                free_token(var_token);
                 printf("ERROR: Failed to add token(var)\n");
                 return Failed_Tokenization;
             }
@@ -154,10 +157,35 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                 number[i] = *str++;
                 i++;
             }
+
+            if(*str == '.') {
+                if(i >= 30) {
+                    printf("ERROR: Too big num\n");
+                    return Failed_Tokenization;
+                }
+                number[i++] = '.';
+                str++;
+
+                if(!isdigit(*str)) {
+                    printf("ERROR: Invalid num\n");
+                    return Failed_Tokenization;
+                }
+
+                while(isdigit(*str) && i < 31){
+                    number[i++] = *str++;
+                }
+            }
+
             number[i] = '\0';
+
+            if(isdigit(*str)) {
+                printf("ERROR: Too big num\n");
+                return Failed_Tokenization;
+            }
             
             TOKEN* num_token = create_token(TOKEN_number, number);  //создали токен числа
             if(add_token(num_token) != Successful_Add) {
+                free_token(num_token);
                 printf("ERROR: Failed to add token(num)\n");
                 return Failed_Tokenization;
             }  //добавили токен в поток

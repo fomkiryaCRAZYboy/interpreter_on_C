@@ -21,55 +21,62 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
     if (tokens_count == 1) {
         // Базовый случай: если токен один, возвращаем его 
         if(tokens[0].type == TOKEN_variable){
-            if(!check_variable_exists(tokens[0].text)){
-                printf("ERROR: variable '%s' not declared\n", tokens[0].text);
-                return NULL;
-            }
-
-            char text_val[32] = {0}; //массив символов для текстового представления значания переменной
+            char text_val[MAX_STRING_LEN] = {0}; //массив символов для текстового представления значания переменной
 
             DATA_TYPE val = {0};
-            bool found = false;
-            for(int i = 0; i < variables_count;i++) {
-                if(strcmp(variables_array[i].name, tokens[0].text) == 0){ //если переменная существует
-                    //копируем её значание (int или double) в соответствующие поля объединения val
-                    if(variables_array[i].type == INT_TYPE) {
-                        val.int_value = variables_array[i].value.int_value;
-                        //записыаем в text_val значение переменной
-                        snprintf(text_val, 31, "%d", val.int_value);
-                    }
-                    else {
-                        val.double_value = variables_array[i].value.double_value;
-                        snprintf(text_val, 31, "%f", val.double_value);
-                    }   
-                    found = true;
-                    break;
-                }
-            }
+            bool str = 0;
 
-            //если переменная не найдена - ошибка
-            if(!found){
-                printf("ERROR: Variable '%s' not found\n", tokens[0].text);
+            int var_idx = get_variable_index(tokens[0].text);
+            if(var_idx == -1) {
+                fprintf(stderr, "ERROR: variable '%s' not declared\n", tokens[0].text);
                 return NULL;
+            } 
+            //копируем её значание (int или double) в соответствующие поля объединения val
+            if(variables_array[var_idx].type == INT_TYPE) {
+                val.int_value = variables_array[var_idx].value.int_value;
+                //записыаем в text_val значение переменной
+                snprintf(text_val, 31, "%d", val.int_value);
             }
-            
-            TOKEN* token = create_token(TOKEN_number, text_val);
+            else if (variables_array[var_idx].type == DOUBLE_TYPE){
+                val.double_value = variables_array[var_idx].value.double_value;
+                snprintf(text_val, 31, "%f", val.double_value);
+            } else {
+                str = 1;
+                strcpy(val.string_value, variables_array[var_idx].value.string_value);
+                snprintf(text_val, MAX_STRING_LEN, "%s", val.string_value);
+            }
 
-            return token;
+            if(str){
+                TOKEN* token = create_token(TOKEN_string, text_val);
+                return token;
+            } else {
+                TOKEN* token = create_token(TOKEN_number, text_val);
+                return token;
+            }
         }
 
         if(tokens[0].type == TOKEN_number){
-            size_t text_len = strlen(tokens[0].text);
-
             char buff[31];
             strcpy(buff, tokens[0].text);
 
             TOKEN* token_num = create_token(TOKEN_number, buff); 
             if(!token_num){
-                printf("ERROR: Memory error\n");
+                fprintf(stderr, "ERROR: Memory error\n");
                 return NULL;
             }
             return token_num;
+        }
+
+        if(tokens[0].type == TOKEN_string){
+            char buff[MAX_STRING_LEN] = {'\0'};
+            strcpy(buff, tokens[0].text);
+
+            TOKEN* token_str = create_token(TOKEN_string, buff);
+            if(!token_str){
+                fprintf(stderr, "ERROR: Memory error\n");
+                return NULL;
+            }
+            return token_str;
         }
     }
 
@@ -393,13 +400,14 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                 return NULL;
             }
         
-            // Проверяем, что оба операнда - числа или переменные
+            // Проверяем, что оба операнда - числа или переменные или строки
             DATA_TYPE left_num = {0};  //переменная для хранения численного значения токена с целью дальнейшего вычисления
             DATA_TYPE right_num = {0};
 
-            int int_left = 1;
+            int int_left = 0;
+            int double_left = 0;
 
-            if(left_result -> type != TOKEN_number){
+            if(left_result -> type != TOKEN_number && left_result -> type != TOKEN_string){
                 if(left_result -> type != TOKEN_variable){
                     printf("ERROR: Can only perform arithmetic operations on numbers\n");
                     free(left_result->text);
@@ -412,6 +420,10 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                     //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
                     if(!(check_variable_exists(left_result -> text))){
                         printf("ERROR: Variable '%s' not declared", left_result -> text);
+                        free(left_result->text);
+                        free(right_result->text);
+                        free(left_result);
+                        free(right_result);
                         return NULL;
                     }
 
@@ -420,27 +432,46 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                         if(strcmp(variables_array[i].name, left_result -> text) == 0){
                             if(variables_array[i].type == INT_TYPE){
                                 left_num.int_value = variables_array[i].value.int_value;
-                            } else {
+                                int_left = 1;
+                                double_left = 0;
+                            } else if(variables_array[i].type == DOUBLE_TYPE){
                                 left_num.double_value = variables_array[i].value.double_value;
                                 int_left = 0;
+                                double_left = 1;
+                            } else {
+                                int_left = 0; 
+                                double_left = 0;
+                                strcpy(left_num.string_value, variables_array[i].value.string_value);
                             }
                         }
                     }
                 }
             } else {
-                //если токен - число, то берем его значение
-               char* ptr = strchr(left_result -> text, '.'); //ищем плавающую точку в числе
-               if(ptr){
-                    left_num.double_value = atof(left_result -> text);
-                    int_left = 0;
-               } else {
-                    left_num.int_value = atoi(left_result -> text);
-               }       
+
+                if(left_result -> type == TOKEN_string){
+                    int_left = 0; 
+                    double_left = 0;
+                    strcpy(left_num.string_value, left_result -> text);
+                } else {
+                    //если токен - число, то берем его значение
+                    char* ptr = strchr(left_result -> text, '.'); //ищем плавающую точку в числе
+                    if(ptr){
+                        left_num.double_value = atof(left_result -> text);
+                        int_left = 0;
+                        double_left = 1;
+                    } else {
+                        int_left = 1;
+                        double_left = 0;
+                        left_num.int_value = atoi(left_result -> text);
+                    }  
+                }     
             }
 
-            int int_right = 1;
+            int int_right = 0;
+            int double_right = 0;
 
-            if(right_result -> type != TOKEN_number){
+
+            if(right_result -> type != TOKEN_number && right_result -> type != TOKEN_string){
                 if(right_result -> type != TOKEN_variable){
                     printf("ERROR: Can only perform arithmetic operations on numbers\n");
                     free(left_result->text);
@@ -453,6 +484,10 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                     //если токен - переменная, проверяем её существование (так как в этой функции обрабатываются rvalue, то если переменной не существует - это ошибка)
                     if(!(check_variable_exists(right_result -> text))){
                         printf("ERROR: Variable '%s' not declared", right_result -> text);
+                        free(left_result->text);
+                        free(right_result->text);
+                        free(left_result);
+                        free(right_result);
                         return NULL;
                     }
 
@@ -460,26 +495,93 @@ TOKEN* parse_expression(TOKEN tokens[], int tokens_count) {
                     for(int i = 0; i < variables_count;i ++){
                         if(variables_array[i].name == right_result -> text){
                             if(variables_array[i].type == INT_TYPE) {
+                                int_right = 1;
+                                double_right = 0;
                                 right_num.int_value = variables_array[i].value.int_value;
-                            } else {
+                            } else if(variables_array[i].type == DOUBLE_TYPE){
                                 right_num.double_value = variables_array[i].value.double_value;
                                 int_right = 0;
+                                double_right = 1;
+                            } else {
+                                int_right = 0; 
+                                double_right = 0;
+                                strcpy(right_num.string_value, variables_array[i].value.string_value);
                             }
                         }
                     }
                 }
             } else {
-                //если токен - число, то берем его значение
-               char* ptr = strchr(right_result -> text, '.'); //ищем плавающую точку в числе
-               if(ptr){
-                    right_num.double_value = atof(right_result -> text);
-                    int_right = 0;
-               } else {
-                    right_num.int_value = atoi(right_result -> text);
-               }     
+                if(right_result -> type == TOKEN_string){
+                    int_right = 0; 
+                    double_right = 0;
+                    strcpy(right_num.string_value, right_result -> text);
+                } else {
+                    //если токен - число, то берем его значение
+                    char* ptr = strchr(right_result -> text, '.'); //ищем плавающую точку в числе
+                    if(ptr){
+                        right_num.double_value = atof(right_result -> text);
+                        int_right = 0;
+                        double_right = 1;
+                    } else {
+                        int_right = 1;
+                        double_right = 0;
+                        right_num.int_value = atoi(right_result -> text);
+                    }   
+                }  
             }
 
             DATA_TYPE result = {0};
+
+            //если переданы две строки - производим конкатенацию
+            if(!int_left && !double_left && !int_right && !double_right){
+
+                if (strcmp(tokens[i].text, "+") == 0) {
+                    char concatenation_string[MAX_STRING_LEN] = {'\0'};
+
+                    if(strlen(left_num.string_value) + strlen(right_num.string_value) >= MAX_STRING_LEN){
+                        fprintf(stderr, "ERROR: String too long\n");
+                        free(left_result->text);
+                        free(right_result->text);
+                        free(left_result);
+                        free(right_result);
+                        return NULL;
+                    }  
+
+                    strcpy(concatenation_string, left_num.string_value);
+                    strcat(concatenation_string, right_num.string_value);
+
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+
+                    TOKEN* result_token = create_token(TOKEN_string, concatenation_string);
+                    if(!result_token){
+                        fprintf(stderr, "ERROR: Memory error\n");
+                        return NULL;
+                    }
+
+                    return result_token;
+
+                } else { 
+                    fprintf(stderr, "ERROR: Cannot subtract string\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+                }
+            }
+
+            if(!int_left && !double_left && (int_right || double_right) ||
+               !int_right &&!double_right && (int_left || double_left)) {
+                fprintf(stderr, "ERROR: Сannot perform arithmetic operations on numbers and strings together\n");
+                    free(left_result->text);
+                    free(right_result->text);
+                    free(left_result);
+                    free(right_result);
+                    return NULL;
+               }
 
             double left = int_left ? (double)left_num.int_value : left_num.double_value;
             double right = int_right ? (double)right_num.int_value : right_num.double_value;

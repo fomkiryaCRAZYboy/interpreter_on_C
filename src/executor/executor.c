@@ -9,6 +9,14 @@
 extern VARIABLE variables_array[MAX_VARIABLES_COUNT];
 extern int variables_count;
 
+void free_variables_array(){
+    for(int i = 0; i < variables_count; i++){
+        free(variables_array[i].name);
+        variables_array[i].name = NULL;
+    }    
+}
+
+
 //left - переменная(слева от '='), right - число или переменная (справа от '=')
 EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
     //проверяем, существует ли переменная на данный момент
@@ -30,7 +38,11 @@ EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
                 variables_array[var_idx_in_array].type = INT_TYPE;
                 variables_array[var_idx_in_array].value.int_value = atoi(right -> text);
             }
-        } else {  //правая часть - переменная (она существует, так как прошла парсинг)
+        } else if (right -> type == TOKEN_string) {  //если правая часть строка
+            variables_array[var_idx_in_array].type = STRING_TYPE;   
+            strcpy(variables_array[var_idx_in_array].value.string_value, right -> text);
+        }
+        else {  //правая часть - переменная (она существует, так как прошла парсинг)
             int right_var_idx = 0;
             while(strcmp(variables_array[right_var_idx].name, right -> text) != 0) right_var_idx++;
             //меняем тип и значение переменной
@@ -38,7 +50,11 @@ EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
 
             if(variables_array[right_var_idx].type == INT_TYPE){
                 variables_array[var_idx_in_array].value.int_value = variables_array[right_var_idx].value.int_value;
-            } else variables_array[var_idx_in_array].value.double_value = variables_array[right_var_idx].value.double_value;
+            } else if(variables_array[right_var_idx].type == DOUBLE_TYPE) {
+                variables_array[var_idx_in_array].value.double_value = variables_array[right_var_idx].value.double_value;
+            } else {
+                strcpy(variables_array[var_idx_in_array].value.string_value, variables_array[right_var_idx].value.string_value);
+            }
         }  
       //если lvalue переменная не существует, её сперва необходимо создать  
     } else{
@@ -60,7 +76,18 @@ EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
                 printf("ERROR: Failed to create or add variable '%s'", left -> text);
                 return Failed_Executing;
             }
-        } //rvalue - переменная
+        } else if(right -> type == TOKEN_string) {
+            DATA_TYPE value;
+            strcpy(value.string_value, right -> text);
+            USING_TYPE type = STRING_TYPE;
+
+            if(create_and_add_variable(left -> text, value, type) != Successful_add_var) {
+                printf("ERROR: Failed to create or add variable '%s'", left -> text);
+                return Failed_Executing;
+            }
+        }
+        
+        //rvalue - переменная
         else {
             int right_var_idx = 0;
             while(strcmp(variables_array[right_var_idx].name, right -> text) != 0) right_var_idx++;
@@ -71,9 +98,12 @@ EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
             if(variables_array[right_var_idx].type == INT_TYPE){
                 type = INT_TYPE;
                 value.int_value = variables_array[right_var_idx].value.int_value;
-            } else {
+            } else if(variables_array[right_var_idx].type == DOUBLE_TYPE) {
                 type = DOUBLE_TYPE;
                 value.double_value = variables_array[right_var_idx].value.double_value;
+            } else {
+                type = STRING_TYPE;
+                strcpy(value.string_value, variables_array[right_var_idx].value.string_value);
             }
 
             if(create_and_add_variable(left -> text, value, type) != Successful_add_var){
@@ -92,23 +122,15 @@ EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right){
 //Переменные, находящиеся в этом массиве однозначно существуют, иначе интерпретация программы не дошла бы до этой функции
 EXECUTING_STATUS execute_print(TOKEN* arguments, int arguments_count){
     for(int i = 0; i < arguments_count; i++){
-        if(arguments[i].type == TOKEN_variable){
-            //ищем переменную в массиве переменных
-            int var_idx = 0;
-            while(strcmp(arguments[i].text, variables_array[var_idx].name) != 0) var_idx++;
-
-            if(variables_array[var_idx].type == INT_TYPE){
-                //выполняем функцию print
-                printf("%d ", variables_array[var_idx].value.int_value);
-            } else //выполняем функцию print
-                printf("%.2f ", variables_array[var_idx].value.double_value);
-        }  //если агумент - число
-        else {
+      //если агумент - число
+        if (arguments[i].type == TOKEN_number){
             char* ptr_float = strchr(arguments[i].text, '.'); //ищем плавающую точку в числе
             if(ptr_float) {
                 //выполняем функцию print
                 printf("%.2f ", atof(arguments[i].text));
             } else printf("%d ", atoi(arguments[i].text));
+        } else {
+            printf("%s ", arguments[i].text);
         }
     }
     

@@ -11,4 +11,6 @@ typedef enum {
 EXECUTING_STATUS execute_assign(TOKEN* left, TOKEN* right);
 EXECUTING_STATUS execute_print(TOKEN* arguments, int arguments_count);
 
+void free_variables_array();
+
 #endif

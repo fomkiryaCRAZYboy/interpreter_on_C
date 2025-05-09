@@ -44,6 +44,6 @@ void free_stream(){
         free(stream[i].text);
         stream[i].text = NULL;
         stream[i].type = 0;
-    }
+    } 
 }
 

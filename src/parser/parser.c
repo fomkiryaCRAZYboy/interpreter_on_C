@@ -49,6 +49,16 @@ bool check_variable_exists(const char* name){
     return exists;
 }
 
+int get_variable_index(const char* name){
+    for(int i = 0; i < variables_count; i++){
+        if(strcmp(name, variables_array[i].name) == 0){
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, const USING_TYPE type){
     if(variables_count >= MAX_VARIABLES_COUNT){
         printf("ERROR: Too many variables declared\n");
@@ -65,12 +75,17 @@ VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, 
     strncpy(var.name, name, strlen(name) + 1);
 
     var.type = type;
+    bool str = false;
 
     // Копируем только нужное поле объединения
     if (type == INT_TYPE) {
         var.value.int_value = value.int_value;
-    } else {
+    } else if (type == DOUBLE_TYPE) {
         var.value.double_value = value.double_value;
+    } else {
+        //если используемый тип не int и не double, значит это - строка
+        str = true;
+        strncpy(var.value.string_value, value.string_value, strlen(value.string_value) + 1);   
     }
 
     //сразу добавляем переменную в массив и увеличиваем variables_count
@@ -79,86 +94,6 @@ VAR_ADD_STATUS create_and_add_variable(const char* name, const DATA_TYPE value, 
     return Successful_add_var;
 }
 
-
-
-AST* create_AST(const TOKEN* node, const TOKEN* right, const TOKEN* left, const TOKEN* print_arguments, const int args_count){
-    if (!node || !right || !left || !print_arguments) {
-        printf("ERROR: Null token passed to create_AST\n");
-        return NULL;
-    }
-
-    AST* new_ast = malloc(sizeof(AST));
-    if(!new_ast){
-        printf("ERROR: Memory error\n");
-        return NULL;
-    }
-
-    new_ast -> node = *node;
-    new_ast -> right = *right;
-    new_ast -> left = *left;
-
-    if(node ->text){
-        new_ast -> node.text = malloc(strlen(node ->text) + 1);
-        if(!new_ast -> node.text){
-            free(new_ast);
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
-        strcpy(new_ast -> node.text, node->text);
-    }
-
-    if(right ->text){
-        new_ast -> right.text = malloc(strlen(right ->text) + 1);
-        if(!new_ast -> right.text){
-            free(new_ast -> node.text);
-            free(new_ast);
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
-        strcpy(new_ast -> right.text, right->text);
-    }
-
-    if(left ->text){
-        new_ast -> left.text = malloc(strlen(left ->text) + 1);
-        if(!new_ast -> left.text){
-            free(new_ast -> right.text);
-            free(new_ast -> node.text);
-            free(new_ast);
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
-        strcpy(new_ast -> left.text, left->text);
-    }
-
-    new_ast ->print_arguments = malloc(args_count * sizeof(TOKEN));
-    if(!new_ast->print_arguments){
-        free(new_ast -> left.text);
-        free(new_ast -> right.text);
-        free(new_ast -> node.text);
-        free(new_ast);
-        printf("ERROR: Memory error\n");
-        return NULL;
-    }
-    for(int i = 0; i < args_count; i++){
-        new_ast -> print_arguments[i].text = malloc(strlen(print_arguments[i].text) + 1);
-        if(!new_ast -> print_arguments[i].text) {
-            for(int j = 0; j < i; j++){
-                free(new_ast -> print_arguments[j].text);
-            }
-            free(new_ast -> left.text);
-            free(new_ast -> right.text);
-            free(new_ast -> node.text);
-            free(new_ast);
-            printf("ERROR: Memory error\n");
-            return NULL;
-        }
-        strcpy(new_ast -> print_arguments[i].text, print_arguments[i].text);
-    }
-
-    new_ast -> count_print_args = args_count;
-
-    return new_ast;
-}
 
 PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
 {
@@ -171,6 +106,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
     
     int k = 0; //индекс для перебора токенов всего кода
     int line_number = 1;
+    
     for(int i = 0; i < semicolon_count; i++){
         TOKEN line[200];
         int j = 0;
@@ -253,61 +189,18 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
                 tokens_in_arg++;
                 free_token(res_arg);
             }
-            
-            /*puts("");
-            printf("++%d++", res_args_count);*/
-
-            /*for(int i = 0; i < res_args_count; i++){
-                printf("%s ", res_args[i].text);
-            }*/
 
             if(execute_print(res_args, res_args_count) != Success_Executing){
                 printf("ERROR in %d line: Execution error\n", line_number);
                 free(res_args);
                 return Failed_Parsing;
             }
-            free(res_args);
 
-            /*TOKEN* print_token = create_token(TOKEN_print, "print");
-            if(!print_token) {
-                free(res_args);
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            } 
-
-            TOKEN* stub = create_token(TOKEN_space, " ");
-            if(!stub) {
-                free_token(print_token);
-                free(res_args);
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            } 
-
-            TOKEN* stub2 = create_token(TOKEN_space, " ");
-            if(!stub2) {
-                free_token(stub);
-                free_token(print_token);
-                free(res_args);
-                printf("ERROR: Memory error\n");
-                return Failed_Parsing;
-            } 
-
-            AST* print_ast = create_AST(print_token, stub, stub2, res_args, res_args_count);
-            if(ast_count >= MAX_AST_COUNT){
-                printf("ERROR in %d line: Too many AST nodes", line_number);
-                free_token(print_token);
-                free_token(stub);
-                free_token(stub2);
-                free(res_args);
-                return Failed_Parsing;
+            for(int i = 0; i < res_args_count; i++){
+                free(res_args[i].text);
+                res_args[i].text = NULL;
             }
-
-            AST_array[ast_count++] = *print_ast;
-            //освобождаем память от уже скопированного массива
             free(res_args);
-            free_token(print_token);
-            free_token(stub);
-            free_token(stub2);*/
 
             line_number++;
         }
