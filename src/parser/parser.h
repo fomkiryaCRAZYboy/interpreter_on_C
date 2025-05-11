@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include "../lexer/lexer.h"
 
+#define CONDITION_SIZE  40
+
 #define MAX_VARIABLES_COUNT 100 //можно объявить до ста переменных в коде
 #define MAX_AST_COUNT   250 // до 250 узлов может быть в программе
 
@@ -72,5 +74,14 @@ int comma_count(TOKEN arguments[], int tokens_count);
 
 //добавление запаршенного токена-аргумента в результирующий массив аргументов функции 'print'
 int add_argument(TOKEN* arguments_array, TOKEN* argument, int index); //index - индекс нового аргумента в массиве
+
+
+
+typedef enum {
+    LOGIC_FALSE = 0,
+    LOGIC_TRUE = 1,
+} CONDITION_STATUS;
+
+CONDITION_STATUS interpret_condition(TOKEN* condition);
 
 #endif

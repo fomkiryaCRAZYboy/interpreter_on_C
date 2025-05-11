@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-AST AST_array[MAX_AST_COUNT];
-int ast_count = 0;
-
 int add_argument(TOKEN* arguments_array, TOKEN* argument, int index){
     if (!arguments_array || !argument || !argument->text) {
         printf("ERROR: Invalid arguments\n");
@@ -203,6 +200,118 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             free(res_args);
 
             line_number++;
+        }
+
+        //обработка условных выражений
+        else if(line[0].type == TOKEN_if){
+            if(line[1].type != TOKEN_open_paren){
+                fprintf(stderr, "ERROR in %d line: Missed symbol '(' after 'if' keyword\n", line_number);
+                return Failed_Parsing;
+            }
+            if(line[2].type == TOKEN_close_paren){
+                fprintf(stderr, "ERROR in %d line: Missed a condition to 'if'\n", line_number);
+                return Failed_Parsing;
+            }
+
+            TOKEN condition[CONDITION_SIZE];
+            int tokens_in_cond_count = 0;
+            int idx = 2;
+            for(; tokens_in_cond_count < CONDITION_SIZE; idx++, tokens_in_cond_count++){
+                if(line[idx].type == TOKEN_close_paren){
+                    break;
+                }
+
+                condition[tokens_in_cond_count] = line[idx];
+            }
+
+            if(line[idx].type != TOKEN_close_paren){
+                fprintf(stderr, "ERROR in %d line: Too big condition to 'if'\n", line_number);
+                return Failed_Parsing;
+            }
+
+            idx++;
+            if(line[idx].type != TOKEN_open_curly_paren){
+                fprintf(stderr, "ERROR in %d line: Missed symbol '{' after 'if' condition\n", line_number);
+                return Failed_Parsing;
+            }
+            idx++;
+            if(line[idx].type == TOKEN_close_curly_paren){
+                fprintf(stderr, "ERROR in %d line: Missed a body of condition\n", line_number);
+                return Failed_Parsing;
+            }
+
+            TOKEN* parsed_condition = parse_expression(condition, tokens_in_cond_count);
+            if (!parsed_condition) {
+                fprintf(stderr, "ERROR in %d line: Failed to parse 'if' condition\n", line_number);
+                return Failed_Parsing;
+            }
+
+            //для формирования подпрограммы (тела цикла) находим с помощью индекса k первую открывающую фигурную скобку
+            //так как в теле цикла могут быть другие подпрограммы, необходимо учитывать уровни скобок
+            
+            int stream_idx = k;
+            int close_curl_par_count = 0;
+            int last_close_curl_par_idx = k;
+            while(stream[stream_idx].type != TOKEN_open_curly_paren && stream[stream_idx].type != TOKEN_end){
+                if(stream[stream_idx].type == TOKEN_close_curly_paren) {
+                    close_curl_par_count++;
+                    last_close_curl_par_idx = stream_idx;
+                }
+                stream_idx++;
+            }  
+
+            // Определяем, выполнять ли тело условия
+            if (interpret_condition(parsed_condition) == LOGIC_TRUE) {
+                
+                TOKEN subroutine[STREAM_SIZE];
+                int subroutine_tokens_count = 0; 
+
+                stream_idx = k-1;
+                
+                int first_open_curl_par_idx = stream_idx;
+                while(close_curl_par_count && stream[stream_idx].type != TOKEN_close_curly_paren){
+                    if(stream[stream_idx].type == TOKEN_open_curly_paren) {
+                        close_curl_par_count--;
+                        first_open_curl_par_idx = stream_idx;
+                    }
+                    stream_idx--;
+                }
+
+                //Собираем токены тела условия
+                idx = first_open_curl_par_idx+1;
+                while (idx < last_close_curl_par_idx) {
+
+                    if (stream[idx].type == TOKEN_semicolon) {
+                        line_number++;
+                    }
+
+                    if (subroutine_tokens_count >= STREAM_SIZE) {
+                        fprintf(stderr, "ERROR: Subroutine too large\n");
+                        free_token(parsed_condition);
+                        return Failed_Parsing;
+                    }
+
+                    subroutine[subroutine_tokens_count] = stream[idx];
+                    idx++;
+                    subroutine_tokens_count++;
+                }
+
+
+                PARSING_STATUS status = parsing(subroutine, subroutine_tokens_count);
+                if (status != Successful_Parsing) {
+                    free_token(parsed_condition);
+                    return status;
+                }
+
+                k = last_close_curl_par_idx+1;
+                continue;
+            }
+
+            free_token(parsed_condition);
+            line_number++;
+
+            k = last_close_curl_par_idx+1;
+            continue;
         }
 
         else if(line[0].type == TOKEN_end){  //если строка содержит 'end' (то есть последняя строка)

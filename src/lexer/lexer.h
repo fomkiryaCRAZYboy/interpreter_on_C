@@ -1,6 +1,8 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#define STREAM_SIZE 2500 //максимальное количество токенов в коде
+
 #define MAX_VARIABLE_LEN 25 //максимальная длина символов для переменной
 #define MAX_STRING_LEN  60 //МАКСИМАЛЬНАЯ длина строки
 
@@ -18,6 +20,10 @@ typedef enum {
 
 //перечисление типов токенов 
 typedef enum {
+    TOKEN_open_curly_paren,  // { в случае истинности выражения (в if), необходимо будет выполнить код в фигурных скобках
+    TOKEN_close_curly_paren,  // }
+    TOKEN_if,  //if для условных выражений
+
     TOKEN_string, //строка: "hello". с двойными кавычками
     TOKEN_dot, //точка (.)
     TOKEN_variable,  //переменная

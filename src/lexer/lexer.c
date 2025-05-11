@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STREAM_SIZE 2500 //максимальное количество токенов в коде
-
 TOKEN stream[STREAM_SIZE] = {0};  // массив для потока токенов
 int tokens_count = 0;  //количество токенов в потоке
 
@@ -135,6 +133,16 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                     return Failed_Tokenization;
                 }
                 free_token(print_token);
+            }
+
+            else if(strcmp(varaible, "if") == 0){
+                TOKEN* if_token = create_token(TOKEN_if, "if");
+                if(add_token(if_token) != Successful_Add) {
+                    free_token(if_token);
+                    printf("ERROR: Failed to add token(print)\n");
+                    return Failed_Tokenization;
+                }
+                free_token(if_token);
             }
 
             else{
@@ -304,6 +312,28 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                         return Failed_Tokenization;
                     }
                     free_token(dot_token);
+                    str++;
+                    break;
+                }
+                case '{': {
+                    TOKEN* op_cur_par_token = create_token(TOKEN_open_curly_paren, "{");
+                    if(add_token(op_cur_par_token) != Successful_Add) {
+                        free_token(op_cur_par_token);
+                        printf("ERROR: Failed to add token\n");
+                        return Failed_Tokenization;
+                    }
+                    free_token(op_cur_par_token);
+                    str++;
+                    break;
+                }
+                case '}': {
+                    TOKEN* cl_cur_par_token = create_token(TOKEN_close_curly_paren, "}");
+                    if(add_token(cl_cur_par_token) != Successful_Add) {
+                        free_token(cl_cur_par_token);
+                        printf("ERROR: Failed to add token\n");
+                        return Failed_Tokenization;
+                    }
+                    free_token(cl_cur_par_token);
                     str++;
                     break;
                 }

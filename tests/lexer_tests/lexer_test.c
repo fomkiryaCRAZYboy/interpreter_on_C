@@ -4,21 +4,24 @@
 
 const char* get_type_of_token(TOKEN_TYPE type) {
     switch (type) {
-        case TOKEN_variable:        return "VAR";
-        case TOKEN_number:          return "NUM";
-        case TOKEN_math_operator:   return "MATH_OP";
-        case TOKEN_open_paren:      return "OPEN_PAR";
-        case TOKEN_close_paren:     return "CLOSE_PAR";
-        case TOKEN_end:             return "END";
-        case TOKEN_assign:          return "ASSIGN";
-        case TOKEN_semicolon:       return "SEMICOL";
-        case TOKEN_comma:           return "COMMA";
-        case TOKEN_space:           return "SPACE";
-        case TOKEN_print:           return "PRINT";
-        case TOKEN_dot:             return "DOT";
-        case TOKEN_string:          return "STR";
+        case TOKEN_variable:            return "VAR";
+        case TOKEN_number:              return "NUM";
+        case TOKEN_math_operator:       return "MATH_OP";
+        case TOKEN_open_paren:          return "OPEN_PAR";
+        case TOKEN_close_paren:         return "CLOSE_PAR";
+        case TOKEN_end:                 return "END";
+        case TOKEN_assign:              return "ASSIGN";
+        case TOKEN_semicolon:           return "SEMICOL";
+        case TOKEN_comma:               return "COMMA";
+        case TOKEN_space:               return "SPACE";
+        case TOKEN_print:               return "PRINT";
+        case TOKEN_dot:                 return "DOT";
+        case TOKEN_string:              return "STR";
+        case TOKEN_if:                  return "IF";
+        case TOKEN_open_curly_paren:    return "OP_CURL_PAR";
+        case TOKEN_close_curly_paren:   return "CL_CURL_PAR";
 
-        default:                    return "UNKNOWN_TYPE";
+        default:                        return "UNKNOWN_TYPE";
     }
 }
 
