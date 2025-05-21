@@ -16,8 +16,6 @@ int parse_print(TOKEN line[], int tokens_count_in_line, int* line_number){
         return 1;
     }    
 
-    printf("\n[%s]\n", line[tokens_count_in_line-2].text);
-
     if(line[tokens_count_in_line-2].type != TOKEN_close_paren){
         printf("ERROR in %d line: Incorrect position of close paren\n", *line_number);
         return 1;

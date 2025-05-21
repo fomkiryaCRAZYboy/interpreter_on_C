@@ -42,7 +42,7 @@ int main(void)
         }
     }*/
 
-    char program[MAX_PROGRAM_SIZE] = "if(1) {print(1);if(1){print(2);if(1){print(3);print(4);}}print(5);} print(\"after if\");end;";
+    char program[MAX_PROGRAM_SIZE] = "string = \"hello \";if(1) {print(1);if(1){x = 14.07;print(2);if(1){print(3);print(4);}print(5);}print(6);print(x);}string = \"\";if(string) {print(string);} print(\"after if\");end;";
     // Токенизация и выполнение всей программы
     if(tokenize(program) != Successful_Tokenization) {
         printf("Tokenization error\n");

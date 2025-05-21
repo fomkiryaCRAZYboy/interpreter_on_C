@@ -160,6 +160,7 @@ PARSING_STATUS parsing(TOKEN stream[], int tokens_count)
             printf("%s", line[i].text);
         }
         puts("");*/
+        if(!tokens_count_in_line) continue;
 
         if(line[0].type == TOKEN_print) {  //если строка содержит 'print'
             if(parse_print(line, tokens_count_in_line, &line_number) != 0){

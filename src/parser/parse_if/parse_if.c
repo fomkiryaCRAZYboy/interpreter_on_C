@@ -100,11 +100,11 @@ int parse_if(TOKEN line[], int tokens_count_in_line, int* line_number, TOKEN str
             subroutine_tokens_count++;
         }
 
-        printf("\n-SUBROUTINE-\n");
+        /*printf("\n-SUBROUTINE-\n");
         for(int i = 0; i < subroutine_tokens_count; ++i){
             printf("[%s]", subroutine[i].text);
         }
-        puts("");
+        puts("");*/
 
         PARSING_STATUS status = parsing(subroutine, subroutine_tokens_count);
         free_token(parsed_condition);
