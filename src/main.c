@@ -1,6 +1,5 @@
 #include "lexer/lexer.h"
 #include "../tests/lexer_tests/lexer_test.h"
-#include "../tests/parser_tests/parser_test.h"
 #include "executor/executor.h"
 
 extern TOKEN stream[];
@@ -18,7 +17,7 @@ extern int variables_count;
 
 int main(void)
 {
-    char input[MAX_INPUT_SIZE];
+    /*char input[MAX_INPUT_SIZE];
     char program[MAX_PROGRAM_SIZE] = {0};
     printf("Welcome to interpreter! Type 'end;' to finish input.\n");
 
@@ -41,9 +40,9 @@ int main(void)
             printf("Program too large!\n");
             return 1;
         }
-    }
+    }*/
 
-    
+    char program[MAX_PROGRAM_SIZE] = "if(1) {print(1);if(1){print(2);if(1){print(3);print(4);}}print(5);} print(\"after if\");end;";
     // Токенизация и выполнение всей программы
     if(tokenize(program) != Successful_Tokenization) {
         printf("Tokenization error\n");

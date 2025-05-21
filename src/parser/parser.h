@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include "../lexer/lexer.h"
+#include "parse_print/parse_print.h"
+#include "parse_if/parse_if.h"
 
 #define CONDITION_SIZE  40
 
@@ -74,14 +76,5 @@ int comma_count(TOKEN arguments[], int tokens_count);
 
 //добавление запаршенного токена-аргумента в результирующий массив аргументов функции 'print'
 int add_argument(TOKEN* arguments_array, TOKEN* argument, int index); //index - индекс нового аргумента в массиве
-
-
-
-typedef enum {
-    LOGIC_FALSE = 0,
-    LOGIC_TRUE = 1,
-} CONDITION_STATUS;
-
-CONDITION_STATUS interpret_condition(TOKEN* condition);
 
 #endif
