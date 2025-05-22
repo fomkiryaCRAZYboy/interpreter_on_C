@@ -24,6 +24,10 @@ typedef enum {
     TOKEN_close_curly_paren,  // }
     TOKEN_if,  //if для условных выражений
 
+    TOKEN_more, // '>'
+    TOKEN_less, // '<'
+    TOKEN_equal, // '=='
+
     TOKEN_string, //строка: "hello". с двойными кавычками
     TOKEN_dot, //точка (.)
     TOKEN_variable,  //переменная

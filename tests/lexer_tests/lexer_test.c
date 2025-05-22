@@ -20,6 +20,9 @@ const char* get_type_of_token(TOKEN_TYPE type) {
         case TOKEN_if:                  return "IF";
         case TOKEN_open_curly_paren:    return "OP_CURL_PAR";
         case TOKEN_close_curly_paren:   return "CL_CURL_PAR";
+        case TOKEN_more:                return "MORE";
+        case TOKEN_less:                return "LESS";
+        case TOKEN_equal:               return "EQUAL";
 
         default:                        return "UNKNOWN_TYPE";
     }

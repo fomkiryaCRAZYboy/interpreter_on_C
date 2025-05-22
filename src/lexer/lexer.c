@@ -272,14 +272,26 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                     break;
                 }
                 case '=': {
-                    TOKEN* assign_token = create_token(TOKEN_assign, "=");
-                    if(add_token(assign_token) != Successful_Add) {
+                    if(*(str+1) != '='){
+                        TOKEN* assign_token = create_token(TOKEN_assign, "=");
+                        if(add_token(assign_token) != Successful_Add) {
+                            free_token(assign_token);
+                            printf("ERROR: Failed to add token\n");
+                            return Failed_Tokenization;
+                        }
                         free_token(assign_token);
-                        printf("ERROR: Failed to add token\n");
-                        return Failed_Tokenization;
+                        str++;
+                    } else {
+                        TOKEN* equal_token = create_token(TOKEN_equal, "==");
+                        if(add_token(equal_token) != Successful_Add){
+                            free_token(equal_token);
+                            fprintf(stderr, "ERROR: Failed to add token\n");
+                            return Failed_Tokenization;
+                        }
+                        free_token(equal_token);
+                        str += 2;
                     }
-                    free_token(assign_token);
-                    str++;
+
                     break;
                 }
                 case ';': {
@@ -334,6 +346,28 @@ TOKENIZATION_STATUS tokenize(char* code_string) {
                         return Failed_Tokenization;
                     }
                     free_token(cl_cur_par_token);
+                    str++;
+                    break;
+                }
+                case '>': {
+                    TOKEN* more_token = create_token(TOKEN_more, ">");
+                    if(add_token(more_token) != Successful_Add) {
+                        free_token(more_token);
+                        printf("ERROR: Failed to add token\n");
+                        return Failed_Tokenization;
+                    }
+                    free_token(more_token);
+                    str++;
+                    break;
+                }
+                case '<': {
+                    TOKEN* less_token = create_token(TOKEN_less, "<");
+                    if(add_token(less_token) != Successful_Add) {
+                        free_token(less_token);
+                        printf("ERROR: Failed to add token\n");
+                        return Failed_Tokenization;
+                    }
+                    free_token(less_token);
                     str++;
                     break;
                 }

@@ -1,24 +1,38 @@
 #include "parse_if.h"
 
 //так как функция parse_expression() возвращает только токены чисел или строк(даже если была передена переменная) то проверяем только токены чисел или строк
-CONDITION_STATUS interpret_condition(TOKEN* condition){
+int interpret_condition(TOKEN* condition){
     if(condition->type == TOKEN_number){
         //если значение нулевое - значит условие ложное
-        if(strcmp(condition -> text, "0") == 0){
-            return LOGIC_FALSE;
+        //если число с плавающей точкой
+        if(strchr(condition -> text, '.')){
+            for(int i = 0; i < strlen(condition -> text); ++i){
+                if(condition -> text[i] == '.'){
+                    continue;
+                }
+                if(condition -> text[i] != '0'){
+                    return 1;
+                }
+            }
+            return 0;
         } else {
-            return LOGIC_TRUE;
+            if(strcmp(condition -> text, "0") == 0){
+                return 0;
+            } else {
+                return 1;
+            }
         }
     } //если не число - значит строка
     //если строка пустая - ложь, иначе - правда
     else{
         if(strlen(condition -> text) == 0){
-            return LOGIC_FALSE;
+            return 0;
         } else {
-            return LOGIC_TRUE;
+            return 1;
         }
     }
 }
+
 
 int parse_if(TOKEN line[], int tokens_count_in_line, int* line_number, TOKEN stream[], int* code_idx){
     if(line[1].type != TOKEN_open_paren){
@@ -72,7 +86,7 @@ int parse_if(TOKEN line[], int tokens_count_in_line, int* line_number, TOKEN str
     }
 
     // Определяем, выполнять ли тело условия
-    if (interpret_condition(parsed_condition) == LOGIC_TRUE) {
+    if (interpret_condition(parsed_condition) == 1) {
         
         TOKEN subroutine[STREAM_SIZE];
         int subroutine_tokens_count = 0; 
